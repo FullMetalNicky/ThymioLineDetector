@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
+from ThymioCamera import ThymioCamera
+
 
 class LineDetector:
-	def __init__(self, width, height):
-		self.image_width = width
-		self.image_height = height
+	def __init__(self, thymioCamera):
+		self.camera = thymioCamera
 
 	def LineMaskByColor(self,frame):
 		hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -22,8 +23,9 @@ class LineDetector:
 		return sharp
 
 	def TopView(self,frame):
-		maxWidth = self.image_width-1;
-		maxHeight = self.image_height-1
+		width, height = self.camera.GetCameraSize()
+		maxWidth = width-1;
+		maxHeight = height-1
 		src = np.array([[270,100], [370,100], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
 		dst = np.array([[0,0], [maxWidth,0], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
 		H = cv2.getPerspectiveTransform(src, dst)
@@ -66,8 +68,24 @@ class LineDetector:
 		ctrimg = np.zeros(frame.shape, dtype = "uint8")
 		ctrimg = cv2.cvtColor(ctrimg, cv2.COLOR_GRAY2BGR)
 		cv2.drawContours(ctrimg, contours, -1, (0,255,0), 3)
-		return ctrimg
+		return ctrimg , contours
 
+	def GetLineCoordinates(self, contours):
+		rects=[]
+		for c in contours:
+			area = cv2.contourArea(c)
+			if area > 200:
+				x,y,w,h = cv2.boundingRect(c)
+				rects.append((x,y,w,h))
+		return rects
+
+	def DrawRects(self, frame, rects):
+		if 1 == frame.shape[2]:
+			frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+		for rect in rects:
+			x, y, w, h = rect
+			cv2.rectangle(frame, (x, y), (x+w, y+h), (x, y, 50), 2)
+		return frame
 
 	def CreateLineMask(self,frame, lines):
 		lineimg = np.zeros(frame.shape, dtype = "uint8")
@@ -75,20 +93,14 @@ class LineDetector:
 			for x1,y1,x2,y2 in line:
 				cv2.line(lineimg,(x1,y1),(x2,y2),(255),10)  
 		return lineimg
-	 
-	def DrawLines(self,frame, lines):
-	 	lineimg = np.zeros(frame.shape, dtype = "uint8")
-	 	lineimg = cv2.cvtColor(lineimg, cv2.COLOR_GRAY2BGR)
-	 	for line in lines:
-	 		for x1,y1,x2,y2 in line:
-	 			cv2.line(lineimg,(x1,y1),(x2,y2),(255, 0, 0),10)  
-	 	return lineimg
 
 	def Flow(self, frame):
 	 	hsvmask = self.LineMaskByColor(frame)
 	 	top = self.TopView(hsvmask)
  		lines = self.DetectLines(top)
  		line = self.CreateLineMask(top, lines)
- 		block = self.ExtractLineBlocks(line)
+ 		block, contours = self.ExtractLineBlocks(line)
+ 		rects = self.GetLineCoordinates(contours)
+ 		rect = self.DrawRects(block, rects)
  		cv2.imshow("frame", frame)
- 		cv2.imshow("block", block)
+ 		cv2.imshow("rect", rect)
