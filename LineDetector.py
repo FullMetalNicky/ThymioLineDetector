@@ -80,11 +80,11 @@ class LineDetector:
 		return rects
 
 	def DrawRects(self, frame, rects):
-		if 1 == frame.shape[2]:
+		if 3 > len(frame.shape):
 			frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 		for rect in rects:
 			x, y, w, h = rect
-			cv2.rectangle(frame, (x, y), (x+w, y+h), (x, y, 50), 2)
+			cv2.rectangle(frame, (x, y), (x+w, y+h), (2 * x, 4 *y, 50), 2)
 		return frame
 
 	def CreateLineMask(self,frame, lines):
@@ -101,6 +101,6 @@ class LineDetector:
  		line = self.CreateLineMask(top, lines)
  		block, contours = self.ExtractLineBlocks(line)
  		rects = self.GetLineCoordinates(contours)
- 		rect = self.DrawRects(block, rects)
+ 		rect = self.DrawRects(top, rects)
  		cv2.imshow("frame", frame)
  		cv2.imshow("rect", rect)
