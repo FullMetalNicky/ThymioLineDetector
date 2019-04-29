@@ -12,13 +12,35 @@ class PatternDetector:
 		self.gridWidth = 0
 		self.gridHeight = 0
 		self.th = 0
+		self.patternDictionary = dict()
+
+	def InitStateMasks(self):
+		destination = np.ones([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		self.patternDictionary["destination"] = destination
+
+		cross = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		cross[self.gridRowNumber - 1, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		cross[:, self.gridColNumber/2] = np.ones([self.gridRowNumber], dtype = "uint8")
+		self.patternDictionary["cross"] = cross
+		
+		paraline = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		paraline[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
+		self.patternDictionary["paraline"] = paraline
+		
+		deadend = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		deadend[self.gridRowNumber - 1, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		self.patternDictionary["deadend"] = deadend
+
+
 
 	def SetImageSize(self, imageWidth, imageHeight):
 		self.imageWidth = imageWidth
 		self.imageHeight = imageHeight
 		self.gridWidth = int(imageWidth / self.gridColNumber)
 		self.gridHeight = int(imageHeight / self.gridRowNumber)
-		self.th = int(self.gridWidth*self.gridWidth*0.3)
+		self.th = int(self.gridWidth*self.gridWidth*0.05)
+		self.InitGridMasks()
+		self.InitStateMasks()
 
 	def InitGridMasks(self):
 		onesMat = np.ones([self.gridHeight, self.gridWidth], dtype = "uint8")
@@ -46,3 +68,30 @@ class PatternDetector:
 				ind = c*self.gridRowNumber + r;
 				patternMat[r, c]= self.ApplyMask(frame, ind)
 		return patternMat
+
+
+	def GetPattern(self, frame):
+
+		tmp = np.multiply(frame, self.patternDictionary["destination"])
+		if tmp.sum() == self.gridRowNumber * self.gridColNumber:
+			return "destination"
+
+		if tmp.sum() == self.gridColNumber or tmp.sum() == 2 * self.gridColNumber:
+			return "ortholine"
+
+		tmp = np.multiply(frame, self.patternDictionary["cross"])
+		if tmp.sum() >= self.gridRowNumber + self.gridColNumber - 1:
+			return "cross"
+
+		tmp = np.multiply(frame, self.patternDictionary["deadend"])
+		if tmp.sum() == 1:
+			return "deadend"
+
+		tmp = np.multiply(frame, self.patternDictionary["paraline"])
+		if tmp.sum() > 1:
+			return "paraline"
+
+		if frame.sum() == 0:
+			return "noline"
+
+		return "weird"

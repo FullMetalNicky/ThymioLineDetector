@@ -7,6 +7,8 @@ from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import tf
+from PatternDetector import PatternDetector
+
 
 PI=3.1415926
 
@@ -20,17 +22,25 @@ class LineDetector:
 		self.video_publisher = rospy.Publisher(self.thymio_name + '/camera/video', Image, queue_size=10)
 		self.camera_info_subscriber = rospy.Subscriber(self.thymio_name + '/camera/camera_info',CameraInfo, self.update_camera_info)
 		self.tf_listener = tf.TransformListener()
+		self.pattern_detector = PatternDetector(5,3)
+		self.state = "none"
 
 	def update_camera_info(self, data):
 		camera = ThymioCamera(data.width, data.height, data.K, data.D)
 		self.SetCamera(camera)
+		self.pattern_detector.SetImageSize(data.width, data.height)
 		self.init_camera = 1
 		self.camera_info_subscriber.unregister()
 
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
 		frame= np.uint8(frame)
-		processedFrame = self.Flow(frame)
+		processedFrame = self.processFrame(frame)
+		patternMat = self.pattern_detector.CreatePatternMatrix(processedFrame)
+		state = self.pattern_detector.GetPattern(patternMat)
+		if (state != self.state):
+			self.state = state
+			print(state)
 		#self.processedFrame = processedFrame
 		msg = self.bridge.cv2_to_imgmsg(processedFrame)
 		self.video_publisher.publish(msg)	
@@ -47,10 +57,9 @@ class LineDetector:
 		while (self.init_tf == 0) or (self.init_camera ==0):
 		    continue
 
-		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 		self.ComputeHomography()
 		self.ComputeFakeHomography()
-
+		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetCamera(self, camera):
 		self.camera = camera
@@ -86,7 +95,7 @@ class LineDetector:
 		src = np.array([[270,100], [370,100], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
 		dst = np.array([[0,0], [maxWidth,0], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
 		H = cv2.getPerspectiveTransform(src, dst)
-		print(H)
+		#print(H)
 		self.H = H
 
 	def LineMaskByColor(self,frame):
@@ -165,6 +174,11 @@ class LineDetector:
 		combined[0:h, 0:w1] = img1
 		combined[0:h, w1:w1+w2] = img2
 		return combined
+
+	def processFrame(self, frame):
+		hsvmask = self.LineMaskByColor(frame)
+	 	top = self.TopView(hsvmask)
+	 	return top
 
 	def Flow(self, frame):
 	 	hsvmask = self.LineMaskByColor(frame)

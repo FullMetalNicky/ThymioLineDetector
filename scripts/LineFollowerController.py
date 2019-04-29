@@ -3,17 +3,15 @@ import cv2
 import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, Twist
-
+from PatternDetector import PatternDetector
 
 
 class LineFollowerController:
 
 	def __init__(self, name):
-		#self.camera = thymioCamera
 		self.thymio_name = name
 		self.velocity_publisher = rospy.Publisher(self.thymio_name + '/cmd_vel', Twist, queue_size=10)
-		self.rotate = 1
-		self.translate = 1
+		
 
 	def RotateByTheta(self, theta):
 		vel_msg = Twist()
