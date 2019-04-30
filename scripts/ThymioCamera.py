@@ -6,10 +6,17 @@ class ThymioCamera:
 		self.width = width
 		self.height = height
 		self.k = k
+		self.k = np.reshape(self.k, (3, 3))
 		self.d = d
 
 	def GetCameraK(self):
 		return self.k
+
+	def GetCameraWidth(self):
+		return self.width
+
+	def GetCameraHeight(self):
+		return self.height
 
 	def GetCameraD(self):
 		return self.d

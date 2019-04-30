@@ -8,7 +8,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import tf
 from PatternDetector import PatternDetector
-
+from numpy.linalg import inv
 
 PI=3.1415926
 
@@ -28,7 +28,7 @@ class LineDetector:
 	def update_camera_info(self, data):
 		camera = ThymioCamera(data.width, data.height, data.K, data.D)
 		self.SetCamera(camera)
-		self.pattern_detector.SetImageSize(data.width, data.height)
+		#self.pattern_detector.SetImageSize(data.width, data.height)
 		self.init_camera = 1
 		self.camera_info_subscriber.unregister()
 
@@ -41,7 +41,7 @@ class LineDetector:
 		if (state != self.state):
 			self.state = state
 			print(state)
-		#self.processedFrame = processedFrame
+		self.processedFrame = processedFrame
 		msg = self.bridge.cv2_to_imgmsg(processedFrame)
 		self.video_publisher.publish(msg)	
 
@@ -58,7 +58,7 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
-		self.ComputeFakeHomography()
+		self.pattern_detector.SetImageSize(self.camera.GetCameraWidth() - 2*self.cropX, self.camera.GetCameraHeight())
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetCamera(self, camera):
@@ -70,33 +70,24 @@ class LineDetector:
 
 	def ComputeHomography(self):
 
-		k = self.camera.GetCameraK()
-		k = np.reshape(k, (3, 3))
+		K = self.camera.GetCameraK()
 		d = self.camera.GetCameraD()
 		w, h = self.camera.GetCameraSize()
-		thymioHeight = self.trans[2]
-		thymioYOffset = self.trans[1]
-		thymioXOffset = self.trans[0]
-		roll = self.rot[0]
-		pitch = self.rot[1] 
-		yaw = self.rot[2]
-		scale = 100
-		M = np.transpose(np.array([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [thymioXOffset, thymioYOffset, -thymioHeight]]))
-		S =  np.array([[scale, 0.0, 0.0], [0.0, scale, 0.0], [0, 0, 1]])
-		M = np.matmul(M, S)
-		size = (h, w)
-		#self.mapx, self.mapy = cv2.initUndistortRectifyMap(k, d, np.linalg.inv(M), k, size, cv2.CV_32FC1) 
-		self.mapx, self.mapy = cv2.initUndistortRectifyMap(k, d, M, k, size, cv2.CV_32FC1) 
-
-	def ComputeFakeHomography(self):
-		width, height = self.camera.GetCameraSize()
-		maxWidth = width-1;
-		maxHeight = height-1
-		src = np.array([[270,100], [370,100], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
-		dst = np.array([[0,0], [maxWidth,0], [maxWidth,maxHeight], [0,maxHeight]], dtype = "float32")
-		H = cv2.getPerspectiveTransform(src, dst)
-		#print(H)
+		roll = self.rot[0] 
+		pitch = self.rot[1] - PI/2
+		yaw = self.rot[2] 
+		Rx = np.array([[1,0, 0, 0], [0, np.cos(pitch), -np.sin(pitch), 0],[0, np.sin(pitch),  np.cos(pitch), 0], [0,0, 0, 1]])
+		Ry = np.array([[np.cos(roll), 0.0, np.sin(roll), 0], [0, 1.0, 0, 0], [-np.sin(roll), 0, np.cos(roll), 0], [0, 0, 0, 1]])
+		Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0, 0], [np.sin(yaw),  np.cos(yaw), 0, 0], [0,0,1,0],[0,0,0,1]])
+		R = np.dot(Rx, np.dot(Ry,Rz))
+		A1 = np.array([ [1, 0, -w/2], [0, 1, -h/2], [0, 0, 0], [ 0, 0, 1 ]])
+		T =  np.array([ [1, 0, 0, 0],  [0, 1, 0, 0],  [0, 0, 1, K[0,0]], [0, 0, 0, 1]])
+		Kr = np.array([ [K[0,0], 0, w/2,0], [0, K[1,1], h/2,0 ], [ 0, 0, 1, 0]])
+		H = np.dot(Kr ,np.dot(T, np.dot(R,A1)))
 		self.H = H
+		self.dsize = (w,h)
+		self.cropX = int(h/2*(np.tan(self.rot[1])))
+		print(self.cropX)
 
 	def LineMaskByColor(self,frame):
 		hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -107,9 +98,8 @@ class LineDetector:
 		
 	def TopView(self,frame):
 		width, height = self.camera.GetCameraSize()
-		top = cv2.warpPerspective(frame, self.H, (width, height))
-		#top = cv2.warpPerspective(frame, self.H, (width, height), flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
-		#top = cv2.remap(frame, self.mapx, self.mapy, interpolation=cv2.INTER_LINEAR)
+		top = cv2.warpPerspective(frame, self.H, self.dsize, flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
+		top = top[:, self.cropX:(width- self.cropX)]
 		return top	
 
 	def DetectLines(self,frame):

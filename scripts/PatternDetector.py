@@ -83,13 +83,13 @@ class PatternDetector:
 		if tmp.sum() >= self.gridRowNumber + self.gridColNumber - 1:
 			return "cross"
 
-		tmp = np.multiply(frame, self.patternDictionary["deadend"])
-		if tmp.sum() == 1:
-			return "deadend"
-
 		tmp = np.multiply(frame, self.patternDictionary["paraline"])
 		if tmp.sum() > 1:
 			return "paraline"
+
+		tmp = np.multiply(frame, self.patternDictionary["deadend"])
+		if tmp.sum() == 1:
+			return "deadend"	
 
 		if frame.sum() == 0:
 			return "noline"
