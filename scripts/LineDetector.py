@@ -26,6 +26,7 @@ class LineDetector:
 		self.pattern_detector = PatternDetector(5,3)
 		self.state = "none"
 		self.pinhole_camera = PinholeCameraModel()
+		self.state_coords = []
 
 	def update_camera_info(self, data):
 		self.image_width = data.width
@@ -34,20 +35,37 @@ class LineDetector:
 		self.init_camera = 1
 		self.camera_info_subscriber.unregister()
 
+	def GetPatternState(self):
+		return self.state	
+		
+	def GetStateCoords(self):
+		return self.state_coords
+
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
 		frame= np.uint8(frame)
-		processedFrame = self.processFrame(frame)
-		patternMat = self.pattern_detector.CreatePatternMatrix(processedFrame)
+		processedFrame, cropFrame = self.processFrame(frame)
+		patternMat = self.pattern_detector.CreatePatternMatrix(cropFrame)
 		state = self.pattern_detector.GetPattern(patternMat)
-		if (state != self.state):
-			self.state = state
-			print(state)
-			[x,y,z] = self.Get3DRobotCoordsFromImage(self.image_width/2, self.image_height-1)
-			print(x,y,z)
+
+		if(state != "noline"):
+			[u, v] = self.CalcCenterOfMass(processedFrame)
+			cv2.circle(frame, (u,v), 5, (255, 255, 255), -1)
+			[x,y,z] = self.Get3DRobotCoordsFromImage(u, v)
+			self.state_coords = [x,y,z]	
+			if (state != self.state):
+				[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
+				camHomVec = np.transpose(np.array([c,-a,-b,1]))
+				robotHomVec = np.dot(self.robot_image_transform,camHomVec)
+				print(u, v)
+				print(x, y, z)
+				print(state)
+	
+		self.state = state			
+			
 		self.processedFrame = processedFrame
-		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-		msg = self.bridge.cv2_to_imgmsg(processedFrame)
+		comb = self.ConcatImages(frame, processedFrame)
+		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 
 	def GetRotationMatrix(self, alpha, beta, gamma):
@@ -77,22 +95,36 @@ class LineDetector:
 	def SetPose(self, trans, rot):
 		self.trans= trans
 		self.rot = rot
+		self.ComputeRobotImageTransform()
 
 	def Get3DRobotCoordsFromImage(self, u, v):
 		[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
-		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
-		T = translation_matrix(self.trans)
-		F = concatenate_matrices(T,R)
 		#cam->robot x->-y', y->-z', z->x'
 		camHomVec = np.transpose(np.array([c,-a,-b,1]))
-		robotHomVec = np.dot(F,camHomVec)
+		robotHomVec = np.dot(self.robot_image_transform,camHomVec)
+
 		#The transformation is from the base link to the camera, but does not include the base link height
 		#so we need to subtract it, if we want z=0 to actually be the ground plane
 		baseHeight = 0.053
 		[x,y,z] = self.trans
-		z = z - baseHeight
-		alpha = (-z)/robotHomVec[2]
+		alpha = (baseHeight-z)/robotHomVec[2]
 		return [x+alpha*robotHomVec[0], y+alpha*robotHomVec[1], z +alpha*robotHomVec[2]]
+
+	def CalcCenterOfMass(self, frame):
+		frame = frame.astype(dtype="uint8")
+		nonZ = np.array(cv2.findNonZero(frame))
+		mx = nonZ[:,:, 0].mean()
+		my = nonZ[:, :, 1].mean()
+		homVec = np.transpose(np.array([[mx, my, 1]], dtype=np.float32))
+		newVec = np.dot(self.H, homVec)
+		newVec = newVec/newVec[2]
+		return [newVec[0], newVec[1]]
+
+	def ComputeRobotImageTransform(self):
+		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
+		T = translation_matrix(self.trans)
+		F = concatenate_matrices(T,R)
+		self.robot_image_transform = R 
 
 	def ComputeHomography(self):
 		K = self.pinhole_camera.intrinsicMatrix()
@@ -109,7 +141,7 @@ class LineDetector:
 		self.H = H
 		self.dsize = (w,h)
 		self.cropX = int(h/2*(np.tan(self.rot[1])))
-		print(self.cropX)
+	
 
 	def LineMaskByColor(self,frame):
 		hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -120,7 +152,6 @@ class LineDetector:
 		
 	def TopView(self,frame):
 		top = cv2.warpPerspective(frame, self.H, self.dsize, flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
-		top = top[:, self.cropX:(self.image_width- self.cropX)]
 		return top	
 
 	def DetectLines(self,frame):
@@ -189,7 +220,8 @@ class LineDetector:
 	def processFrame(self, frame):
 		hsvmask = self.LineMaskByColor(frame)
 	 	top = self.TopView(hsvmask)
-	 	return top
+	 	croptop = top[:, self.cropX:(self.image_width- self.cropX)]
+	 	return top, croptop
 
 	def Flow(self, frame):
 	 	hsvmask = self.LineMaskByColor(frame)

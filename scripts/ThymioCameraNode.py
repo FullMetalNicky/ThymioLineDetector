@@ -37,6 +37,7 @@ class BasicThymio:
 
         self.current_pose = Pose()
         self.current_twist = Twist()
+        self.state = "none"
         # publish at this rate
         self.rate = rospy.Rate(10)
         self.line_detector = LineDetector(thymio_name)
@@ -83,6 +84,21 @@ class BasicThymio:
     def InitFlow(self):
         self.line_detector.Init()
 
+    def Stop(self):
+        self.controller.Stop()    
+
+    def Evaluate(self):
+        state = self.line_detector.GetPatternState()
+        if self.state != state:
+            self.state = state
+            #print(state)
+            if self.state == 'ortholine':
+               self.Stop()
+               coords = self.line_detector.GetStateCoords()
+               #print(coords)
+               self.controller.MoveDistance(coords[0])
+               #self.Stop()
+
 def usage():
     return "Wrong number of parameters. basic_move.py [thymio_name]"
 
@@ -102,5 +118,5 @@ if __name__ == '__main__':
     thymio.Start()
 
     while not rospy.is_shutdown():
-        str = "nicky"
+        thymio.Evaluate()
     

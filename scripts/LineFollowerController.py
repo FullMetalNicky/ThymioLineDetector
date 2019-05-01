@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, Twist
-from PatternDetector import PatternDetector
 
 
 class LineFollowerController:
@@ -11,7 +10,8 @@ class LineFollowerController:
 	def __init__(self, name):
 		self.thymio_name = name
 		self.velocity_publisher = rospy.Publisher(self.thymio_name + '/cmd_vel', Twist, queue_size=10)
-		
+		self.rate = rospy.Rate(10)
+
 
 	def RotateByTheta(self, theta):
 		vel_msg = Twist()
@@ -40,7 +40,7 @@ class LineFollowerController:
 
 	def MoveDistance(self, distance):
 		vel_msg = Twist()
-		vel_msg.linear.x = 0.2 # m/s
+		vel_msg.linear.x = 0.15 # m/s
 		currDist =0
 		t0 = rospy.Time.now().to_sec()
 
@@ -61,3 +61,8 @@ class LineFollowerController:
 		vel_msg = Twist()
 		vel_msg.linear.x = 0.1 # m/s
 		self.velocity_publisher.publish(vel_msg)
+
+	def Stop(self):
+		vel_msg = Twist()
+		vel_msg.linear.x = 0.
+		self.velocity_publisher.publish(vel_msg)  

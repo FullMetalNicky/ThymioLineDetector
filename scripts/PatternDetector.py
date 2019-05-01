@@ -19,10 +19,19 @@ class PatternDetector:
 		self.patternDictionary["destination"] = destination
 
 		cross = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		cross[self.gridRowNumber - 1, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		cross[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
 		cross[:, self.gridColNumber/2] = np.ones([self.gridRowNumber], dtype = "uint8")
 		self.patternDictionary["cross"] = cross
-		
+
+		tjunc = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		tjunc[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		tjunc[self.gridRowNumber/2: self.gridRowNumber, self.gridColNumber/2] = np.ones([self.gridRowNumber - self.gridRowNumber/2], dtype = "uint8")
+		self.patternDictionary["tjunc"] = tjunc
+
+		ortholine = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		ortholine[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		self.patternDictionary["ortholine"] = ortholine
+
 		paraline = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		paraline[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
 		self.patternDictionary["paraline"] = paraline
@@ -76,15 +85,20 @@ class PatternDetector:
 		if tmp.sum() == self.gridRowNumber * self.gridColNumber:
 			return "destination"
 
-		if tmp.sum() == self.gridColNumber or tmp.sum() == 2 * self.gridColNumber:
-			return "ortholine"
-
 		tmp = np.multiply(frame, self.patternDictionary["cross"])
-		if tmp.sum() >= self.gridRowNumber + self.gridColNumber - 1:
+		if tmp.sum() == self.gridRowNumber + self.gridColNumber - 1:
 			return "cross"
 
+		tmp = np.multiply(frame, self.patternDictionary["tjunc"])
+		if tmp.sum() == (self.gridRowNumber/2 + self.gridColNumber):
+			return "tjunc"	
+
+		tmp = np.multiply(frame, self.patternDictionary["ortholine"])
+		if tmp.sum() == self.gridColNumber:
+			return "ortholine"
+
 		tmp = np.multiply(frame, self.patternDictionary["paraline"])
-		if tmp.sum() > 1:
+		if tmp.sum() > self.gridRowNumber/2:
 			return "paraline"
 
 		tmp = np.multiply(frame, self.patternDictionary["deadend"])
