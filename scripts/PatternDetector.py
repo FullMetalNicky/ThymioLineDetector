@@ -47,7 +47,7 @@ class PatternDetector:
 		self.imageHeight = imageHeight
 		self.gridWidth = int(imageWidth / self.gridColNumber)
 		self.gridHeight = int(imageHeight / self.gridRowNumber)
-		self.th = int(self.gridWidth*self.gridWidth*0.05)
+		self.th = int(self.gridWidth*self.gridHeight*0.2)
 		self.InitGridMasks()
 		self.InitStateMasks()
 
@@ -64,7 +64,6 @@ class PatternDetector:
 	def ApplyMask(self, frame, ind):
 		res = frame * self.masks[ind];
 		nonZ = cv2.findNonZero(res)
-		#print(nonZ)
 		if nonZ is not None:
 			if nonZ.shape[0]>self.th:
 				return 1;

@@ -37,16 +37,24 @@ class LineDetector:
 
 	def GetPatternState(self):
 		return self.state	
-		
+
 	def GetStateCoords(self):
 		return self.state_coords
 
+	def DetectPattern(self, frame):
+		patternMat = self.pattern_detector.CreatePatternMatrix(frame)
+		state = self.pattern_detector.GetPattern(patternMat)
+		return state
+
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
-		frame= np.uint8(frame)
-		processedFrame, cropFrame = self.processFrame(frame)
-		patternMat = self.pattern_detector.CreatePatternMatrix(cropFrame)
-		state = self.pattern_detector.GetPattern(patternMat)
+		processedFrame = self.processFrame(frame)
+		#straight = self.IsLineStraight(processedFrame)
+		#print(straight)
+		#center = self.IsLineCentered(processedFrame)
+		#print(center)
+		
+		state = self.DetectPattern(processedFrame)
 
 		if(state != "noline"):
 			[u, v] = self.CalcCenterOfMass(processedFrame)
@@ -65,6 +73,7 @@ class LineDetector:
 			
 		self.processedFrame = processedFrame
 		comb = self.ConcatImages(frame, processedFrame)
+		#comb = self.ConcatImages(comb, ctrimg)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 
@@ -89,7 +98,7 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
-		self.pattern_detector.SetImageSize(self.image_width - 2*self.cropX, self.image_height)
+		self.pattern_detector.SetImageSize(self.image_width, self.image_height)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetPose(self, trans, rot):
@@ -101,8 +110,8 @@ class LineDetector:
 		[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
 		#cam->robot x->-y', y->-z', z->x'
 		camHomVec = np.transpose(np.array([c,-a,-b,1]))
-		robotHomVec = np.dot(self.robot_image_transform,camHomVec)
-
+		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
+		robotHomVec = np.dot(R,camHomVec)
 		#The transformation is from the base link to the camera, but does not include the base link height
 		#so we need to subtract it, if we want z=0 to actually be the ground plane
 		baseHeight = 0.053
@@ -124,23 +133,17 @@ class LineDetector:
 		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
 		T = translation_matrix(self.trans)
 		F = concatenate_matrices(T,R)
-		self.robot_image_transform = R 
+		self.robot_image_transform = F
 
 	def ComputeHomography(self):
 		K = self.pinhole_camera.intrinsicMatrix()
-		w = self.image_width
-		h = self.image_height
-		roll = self.rot[0] 
-		pitch = self.rot[1] - PI/2
-		yaw = self.rot[2] 
-		R = self.GetRotationMatrix(pitch, roll, yaw)
-		A1 = np.array([ [1, 0, -w/2], [0, 1, -h/2], [0, 0, 0], [ 0, 0, 1 ]])
+		R = self.GetRotationMatrix(self.rot[1] - PI/2, self.rot[0] , self.rot[2] )
+		A1 = np.array([ [1, 0, -self.image_width/2], [0, 1, -self.image_height/2], [0, 0, 0], [ 0, 0, 1 ]])
 		T =  np.array([ [1, 0, 0, 0],  [0, 1, 0, 0],  [0, 0, 1, K[0,0]], [0, 0, 0, 1]])
-		Kr = np.array([ [K[0,0], 0, w/2,0], [0, K[1,1], h/2,0 ], [ 0, 0, 1, 0]])
+		Kr = np.array([ [K[0,0], 0, self.image_width/2,0], [0, K[1,1], self.image_height/2,0 ], [ 0, 0, 1, 0]])
 		H = np.dot(Kr ,np.dot(T, np.dot(R,A1)))
 		self.H = H
-		self.dsize = (w,h)
-		self.cropX = int(h/2*(np.tan(self.rot[1])))
+		self.dsize = (self.image_width,self.image_height)
 	
 
 	def LineMaskByColor(self,frame):
@@ -149,6 +152,23 @@ class LineDetector:
 		highTH = np.array([180,255,30], np.uint8)
 		mask = cv2.inRange(hsv, lowTH, highTH)
 		return mask
+
+	def IsLineStraight(self, frame):
+		frame = frame.astype(dtype="uint8")
+		eps = 0.1
+		nonZ = cv2.findNonZero(frame)
+		line = cv2.fitLine(nonZ, cv2.DIST_L2, 0, 0.01, 0.01)
+		if (np.fabs(line[0]) < eps) and (1.0 - np.fabs(line[1]) < eps):
+			return True
+		return False
+
+	def IsLineCentered(self, frame):
+		frame = frame.astype(dtype="uint8")
+		nonZ = cv2.findNonZero(frame)
+		x,y,w,h = cv2.boundingRect(nonZ)
+		boxCenter = (x + x + w)/2
+		return self.image_width/2 - boxCenter
+
 		
 	def TopView(self,frame):
 		top = cv2.warpPerspective(frame, self.H, self.dsize, flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
@@ -175,7 +195,6 @@ class LineDetector:
 
 	def ExtractLineBlocks(self,frame):
 		frame = cv2.threshold(frame, 127, 255, cv2.THRESH_BINARY)[1]
-		#contours, hierarchy = cv2.findContours(frame,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 		im, contours, hierarchy = cv2.findContours(frame,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 		ctrimg = np.zeros(frame.shape, dtype = "uint8")
 		ctrimg = cv2.cvtColor(ctrimg, cv2.COLOR_GRAY2BGR)
@@ -207,12 +226,16 @@ class LineDetector:
 		return lineimg
 
 	def ConcatImages(self,img1, img2):
+		if 3 == len(img1.shape):
+			img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+		if 3 == len(img2.shape):
+			img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+
 		h1, w1 = img1.shape[:2]	
 		h2, w2 = img2.shape[:2]	
 		h = max(h1, h2)
 		w = w1 +w2
 		combined = np.zeros([h, w], dtype = "uint8")
-		img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
 		combined[0:h, 0:w1] = img1
 		combined[0:h, w1:w1+w2] = img2
 		return combined
@@ -220,8 +243,7 @@ class LineDetector:
 	def processFrame(self, frame):
 		hsvmask = self.LineMaskByColor(frame)
 	 	top = self.TopView(hsvmask)
-	 	croptop = top[:, self.cropX:(self.image_width- self.cropX)]
-	 	return top, croptop
+	 	return top
 
 	def Flow(self, frame):
 	 	hsvmask = self.LineMaskByColor(frame)
