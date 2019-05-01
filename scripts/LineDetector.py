@@ -9,6 +9,7 @@ import tf
 from PatternDetector import PatternDetector
 from numpy.linalg import inv
 from image_geometry import PinholeCameraModel 
+from  tf.transformations import rotation_matrix, concatenate_matrices, translation_matrix
 
 PI=3.1415926
 
@@ -42,9 +43,20 @@ class LineDetector:
 		if (state != self.state):
 			self.state = state
 			print(state)
+			[x,y,z] = self.Get3DRobotCoordsFromImage(self.image_width/2, self.image_height-1)
+			print(x,y,z)
 		self.processedFrame = processedFrame
+		frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 		msg = self.bridge.cv2_to_imgmsg(processedFrame)
 		self.video_publisher.publish(msg)	
+
+	def GetRotationMatrix(self, alpha, beta, gamma):
+		origin, xaxis, yaxis, zaxis = (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)
+		Rx = rotation_matrix(alpha, xaxis)
+		Ry = rotation_matrix(beta, yaxis)
+		Rz = rotation_matrix(gamma, zaxis)
+		R = concatenate_matrices(Rx, Ry, Rz)
+		return R
 
 	def Init(self):
 		while self.init_tf == 0:
@@ -62,12 +74,25 @@ class LineDetector:
 		self.pattern_detector.SetImageSize(self.image_width - 2*self.cropX, self.image_height)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
-	def SetCamera(self, camera):
-		self.camera = camera
-
 	def SetPose(self, trans, rot):
 		self.trans= trans
 		self.rot = rot
+
+	def Get3DRobotCoordsFromImage(self, u, v):
+		[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
+		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
+		T = translation_matrix(self.trans)
+		F = concatenate_matrices(T,R)
+		#cam->robot x->-y', y->-z', z->x'
+		camHomVec = np.transpose(np.array([c,-a,-b,1]))
+		robotHomVec = np.dot(F,camHomVec)
+		#The transformation is from the base link to the camera, but does not include the base link height
+		#so we need to subtract it, if we want z=0 to actually be the ground plane
+		baseHeight = 0.053
+		[x,y,z] = self.trans
+		z = z - baseHeight
+		alpha = (-z)/robotHomVec[2]
+		return [x+alpha*robotHomVec[0], y+alpha*robotHomVec[1], z +alpha*robotHomVec[2]]
 
 	def ComputeHomography(self):
 		K = self.pinhole_camera.intrinsicMatrix()
@@ -76,10 +101,7 @@ class LineDetector:
 		roll = self.rot[0] 
 		pitch = self.rot[1] - PI/2
 		yaw = self.rot[2] 
-		Rx = np.array([[1,0, 0, 0], [0, np.cos(pitch), -np.sin(pitch), 0],[0, np.sin(pitch),  np.cos(pitch), 0], [0,0, 0, 1]])
-		Ry = np.array([[np.cos(roll), 0.0, np.sin(roll), 0], [0, 1.0, 0, 0], [-np.sin(roll), 0, np.cos(roll), 0], [0, 0, 0, 1]])
-		Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0, 0], [np.sin(yaw),  np.cos(yaw), 0, 0], [0,0,1,0],[0,0,0,1]])
-		R = np.dot(Rx, np.dot(Ry,Rz))
+		R = self.GetRotationMatrix(pitch, roll, yaw)
 		A1 = np.array([ [1, 0, -w/2], [0, 1, -h/2], [0, 0, 0], [ 0, 0, 1 ]])
 		T =  np.array([ [1, 0, 0, 0],  [0, 1, 0, 0],  [0, 0, 1, K[0,0]], [0, 0, 0, 1]])
 		Kr = np.array([ [K[0,0], 0, w/2,0], [0, K[1,1], h/2,0 ], [ 0, 0, 1, 0]])
