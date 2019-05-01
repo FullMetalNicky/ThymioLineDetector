@@ -53,7 +53,9 @@ class LineDetector:
 		#print(straight)
 		#center = self.IsLineCentered(processedFrame)
 		#print(center)
-		
+		line, direction = self.GetLineInRobotFrame(processedFrame)
+		print(line, direction)
+
 		state = self.DetectPattern(processedFrame)
 
 		if(state != "noline"):
@@ -73,7 +75,6 @@ class LineDetector:
 			
 		self.processedFrame = processedFrame
 		comb = self.ConcatImages(frame, processedFrame)
-		#comb = self.ConcatImages(comb, ctrimg)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 
@@ -129,6 +130,13 @@ class LineDetector:
 		newVec = newVec/newVec[2]
 		return [newVec[0], newVec[1]]
 
+	def TransformTopToImage(self, u, v):
+		homVec = np.transpose(np.array([[u, v, 1]], dtype=np.float32))
+		newVec = np.dot(self.H, homVec)
+		newVec = newVec/newVec[2]
+		return [newVec[0], newVec[1]]
+
+
 	def ComputeRobotImageTransform(self):
 		R = self.GetRotationMatrix(self.rot[0], self.rot[1], self.rot[2])
 		T = translation_matrix(self.trans)
@@ -153,6 +161,24 @@ class LineDetector:
 		mask = cv2.inRange(hsv, lowTH, highTH)
 		return mask
 
+	def GetLineInRobotFrame(self, frame):
+		frame = frame.astype(dtype="uint8")
+		nonZ = cv2.findNonZero(frame)
+		line = cv2.fitLine(nonZ, cv2.DIST_L2, 0, 0.01, 0.01)
+		px1 = line[2]
+		py1 = line[3]
+		px2 = px1 + 2*line[0]
+		py2 = py1 + 2*line[1]
+		[u1, v1] = self.TransformTopToImage(px1, py1)
+		[u2, v2] = self.TransformTopToImage(px2, py2)
+		l1 = self.Get3DRobotCoordsFromImage(u1, v1)
+		l1[2] = 0
+		l2 = self.Get3DRobotCoordsFromImage(u2, v2)
+		direction = [l2[0] - l1[0], l2[1] - l1[1]]
+		direction  = direction / np.sqrt(direction[0]*direction[0] + direction[1]*direction[1])
+		return l1, direction
+
+
 	def IsLineStraight(self, frame):
 		frame = frame.astype(dtype="uint8")
 		eps = 0.1
@@ -174,56 +200,6 @@ class LineDetector:
 		top = cv2.warpPerspective(frame, self.H, self.dsize, flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
 		return top	
 
-	def DetectLines(self,frame):
-		threshold =60
-		lines = cv2.HoughLinesP(frame, 1, np.pi/180, threshold, 0, 10, 20);	
-		return lines
-
-	def ExtractLineBlocks2(self,frame, lines):
-		lineimg = np.copy(frame)
-		lineimg = cv2.cvtColor(lineimg, cv2.COLOR_GRAY2BGR)
-		points = []
-		for line in lines:
-			x1, y1, x2, y2 = line[0]
-			points.append([x1, y1])
-			points.append([x2, y2])
-		points = np.array(points)
-		x, y, w, h = cv2.boundingRect(points)	
-		print(x, y, w, h)
-		cv2.rectangle(lineimg, (x, y), (x+w, y+h), (0, 255, 0), 2)
-		return lineimg
-
-	def ExtractLineBlocks(self,frame):
-		frame = cv2.threshold(frame, 127, 255, cv2.THRESH_BINARY)[1]
-		im, contours, hierarchy = cv2.findContours(frame,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-		ctrimg = np.zeros(frame.shape, dtype = "uint8")
-		ctrimg = cv2.cvtColor(ctrimg, cv2.COLOR_GRAY2BGR)
-		cv2.drawContours(ctrimg, contours, -1, (0,255,0), 3)
-		return ctrimg , contours
-
-	def GetLineCoordinates(self, contours):
-		rects=[]
-		for c in contours:
-			area = cv2.contourArea(c)
-			if area > 200:
-				x,y,w,h = cv2.boundingRect(c)
-				rects.append((x,y,w,h))
-		return rects
-
-	def DrawRects(self, frame, rects):
-		if 3 > len(frame.shape):
-			frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-		for rect in rects:
-			x, y, w, h = rect
-			cv2.rectangle(frame, (x, y), (x+w, y+h), (2 * x, 4 *y, 50), 2)
-		return frame
-
-	def CreateLineMask(self,frame, lines):
-		lineimg = np.zeros(frame.shape, dtype = "uint8")
-		for line in lines:
-			for x1,y1,x2,y2 in line:
-				cv2.line(lineimg,(x1,y1),(x2,y2),(255),10)  
-		return lineimg
 
 	def ConcatImages(self,img1, img2):
 		if 3 == len(img1.shape):
@@ -245,16 +221,4 @@ class LineDetector:
 	 	top = self.TopView(hsvmask)
 	 	return top
 
-	def Flow(self, frame):
-	 	hsvmask = self.LineMaskByColor(frame)
-	 	top = self.TopView(hsvmask)
- 		#lines = self.DetectLines(top)
- 		#line = self.CreateLineMask(top, lines)
- 		#block, contours = self.ExtractLineBlocks(line)
- 		#rects = self.GetLineCoordinates(contours)
- 		#rect = self.DrawRects(top, rects)
- 		#cv2.imshow("frame", frame)
- 		#cv2.imshow("rect", rect)
- 		#cv2.imshow("top", top)
- 		combined = self.ConcatImages(frame, top)
- 		return combined
+
