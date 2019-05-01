@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from ThymioCamera import ThymioCamera
 import rospy
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
@@ -9,6 +8,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import tf
 from PatternDetector import PatternDetector
 from numpy.linalg import inv
+from image_geometry import PinholeCameraModel 
 
 PI=3.1415926
 
@@ -24,11 +24,12 @@ class LineDetector:
 		self.tf_listener = tf.TransformListener()
 		self.pattern_detector = PatternDetector(5,3)
 		self.state = "none"
+		self.pinhole_camera = PinholeCameraModel()
 
 	def update_camera_info(self, data):
-		camera = ThymioCamera(data.width, data.height, data.K, data.D)
-		self.SetCamera(camera)
-		#self.pattern_detector.SetImageSize(data.width, data.height)
+		self.image_width = data.width
+		self.image_height = data.height
+		self.pinhole_camera.fromCameraInfo(data)
 		self.init_camera = 1
 		self.camera_info_subscriber.unregister()
 
@@ -58,7 +59,7 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
-		self.pattern_detector.SetImageSize(self.camera.GetCameraWidth() - 2*self.cropX, self.camera.GetCameraHeight())
+		self.pattern_detector.SetImageSize(self.image_width - 2*self.cropX, self.image_height)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetCamera(self, camera):
@@ -69,10 +70,9 @@ class LineDetector:
 		self.rot = rot
 
 	def ComputeHomography(self):
-
-		K = self.camera.GetCameraK()
-		d = self.camera.GetCameraD()
-		w, h = self.camera.GetCameraSize()
+		K = self.pinhole_camera.intrinsicMatrix()
+		w = self.image_width
+		h = self.image_height
 		roll = self.rot[0] 
 		pitch = self.rot[1] - PI/2
 		yaw = self.rot[2] 
@@ -97,9 +97,8 @@ class LineDetector:
 		return mask
 		
 	def TopView(self,frame):
-		width, height = self.camera.GetCameraSize()
 		top = cv2.warpPerspective(frame, self.H, self.dsize, flags=cv2.INTER_CUBIC + cv2.WARP_INVERSE_MAP)
-		top = top[:, self.cropX:(width- self.cropX)]
+		top = top[:, self.cropX:(self.image_width- self.cropX)]
 		return top	
 
 	def DetectLines(self,frame):
