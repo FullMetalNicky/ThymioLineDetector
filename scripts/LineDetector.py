@@ -35,6 +35,9 @@ class LineDetector:
 		self.init_camera = 1
 		self.camera_info_subscriber.unregister()
 
+	def GetImageSize(self):
+		return [self.image_width, self.image_height ]
+
 	def GetPatternState(self):
 		return self.state	
 
@@ -160,6 +163,11 @@ class LineDetector:
 		highTH = np.array([180,255,30], np.uint8)
 		mask = cv2.inRange(hsv, lowTH, highTH)
 		return mask
+
+	def GetNonZero(self, points):
+		frame = frame.astype(dtype="uint8")
+		nonZ = cv2.findNonZero(frame)
+		return nonZ
 
 	def GetLineInRobotFrame(self, frame):
 		frame = frame.astype(dtype="uint8")
