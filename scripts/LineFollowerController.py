@@ -40,7 +40,7 @@ class LineFollowerController:
 
 	def MoveDistance(self, distance):
 		vel_msg = Twist()
-		vel_msg.linear.x = 0.15 # m/s
+		vel_msg.linear.x = 0.1 # m/s
 		currDist =0
 		t0 = rospy.Time.now().to_sec()
 
@@ -56,10 +56,16 @@ class LineFollowerController:
 		vel_msg.linear.x = 0.
 		vel_msg.angular.z = 0.
 		self.velocity_publisher.publish(vel_msg)  
+		print(currDist)
 
-	def Slow(self):
+	def Move(self):
 		vel_msg = Twist()
 		vel_msg.linear.x = 0.1 # m/s
+		self.velocity_publisher.publish(vel_msg)
+
+	def Rotate(self):
+		vel_msg = Twist()
+		vel_msg.angular.z = 0.1 # m/s
 		self.velocity_publisher.publish(vel_msg)
 
 	def Stop(self):

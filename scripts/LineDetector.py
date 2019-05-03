@@ -26,6 +26,7 @@ class LineDetector:
 		self.state = "none"
 		self.pinhole_camera = PinholeCameraModel()
 		self.state_coords = []
+		self.center_coords = []
 
 	def update_camera_info(self, data):
 		self.image_width = data.width
@@ -78,12 +79,16 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
+		self.center_coords = self.Get3DRobotCoordsFromImage(self.image_width/2, self.image_height/2)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetPose(self, trans, rot):
 		self.trans= trans
 		self.rot = rot
 		self.ComputeRobotImageTransform()
+
+	def GetCenter3DCoords(self):
+		return self.center_coords
 
 	def Get3DRobotCoordsFromImage(self, u, v):
 		[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
@@ -171,12 +176,14 @@ class LineDetector:
 			return True
 		return False
 
-	def IsLineCentered(self, frame):
+	def GetLineOffset(self, frame):
 		frame = frame.astype(dtype="uint8")
 		nonZ = cv2.findNonZero(frame)
 		x,y,w,h = cv2.boundingRect(nonZ)
 		boxCenter = (x + x + w)/2
-		return self.image_width/2 - boxCenter
+		p1 = self.Get3DRobotCoordsFromImage(boxCenter, 0)
+		p2 = self.Get3DRobotCoordsFromImage(self.image_width/2, 0)
+		return p2[1] - p1[1]
 
 		
 	def TopView(self,frame):
