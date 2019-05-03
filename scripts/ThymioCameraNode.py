@@ -21,9 +21,7 @@ import os
 # a handy tool to convert orientations
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import tf
-from ThymioCamera import ThymioCamera
-from LineDetector import LineDetector
-from LineFollowerController import LineFollowerController
+from MazeWalker import MazeWalker
 
 PI=3.1415926
 
@@ -39,11 +37,10 @@ class BasicThymio:
         self.current_twist = Twist()
         self.state = "none"
         # publish at this rate
-        self.rate = rospy.Rate(10)
-        self.line_detector = LineDetector(thymio_name)
-        self.controller = LineFollowerController(thymio_name)      
+        self.rate = rospy.Rate(10)  
         self.pose_subscriber = rospy.Subscriber(self.thymio_name + '/odom',Odometry, self.update_state)
         self.tf_listener = tf.TransformListener()       
+        self.maze_walker = MazeWalker(thymio_name)
 
 
     def thymio_state_service_request(self, position, orientation):
@@ -78,26 +75,9 @@ class BasicThymio:
         (roll, pitch, yaw) = euler_from_quaternion (quat)
        
 
-    def Start(self):
-        self.controller.Slow()  
+    def Simple(self):
+         self.maze_walker.Simple()
 
-    def InitFlow(self):
-        self.line_detector.Init()
-
-    def Stop(self):
-        self.controller.Stop()    
-
-    def Evaluate(self):
-        state = self.line_detector.GetPatternState()
-        if self.state != state:
-            self.state = state
-            #print(state)
-            if self.state == 'ortholine':
-               self.Stop()
-               coords = self.line_detector.GetStateCoords()
-               #print(coords)
-               self.controller.MoveDistance(coords[0])
-               #self.Stop()
 
 def usage():
     return "Wrong number of parameters. basic_move.py [thymio_name]"
@@ -113,10 +93,9 @@ if __name__ == '__main__':
     thymio = BasicThymio(thymio_name)
     thymio.thymio_state_service_request([0.,0.,0.], [0.,0.,0.])
     rospy.sleep(1.)
-
-    thymio.InitFlow()
-    thymio.Start()
+ 
 
     while not rospy.is_shutdown():
-        thymio.Evaluate()
+       str = "nicky"
+       thymio.Simple()
     

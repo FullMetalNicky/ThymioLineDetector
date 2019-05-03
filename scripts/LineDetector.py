@@ -19,11 +19,10 @@ class LineDetector:
 		self.bridge = CvBridge()
 		self.init_tf=0
 		self.init_camera = 0
-		self.processedFrame = []
+		self.processedFrames = []
 		self.video_publisher = rospy.Publisher(self.thymio_name + '/camera/video', Image, queue_size=10)
 		self.camera_info_subscriber = rospy.Subscriber(self.thymio_name + '/camera/camera_info',CameraInfo, self.update_camera_info)
 		self.tf_listener = tf.TransformListener()
-		self.pattern_detector = PatternDetector(5,3)
 		self.state = "none"
 		self.pinhole_camera = PinholeCameraModel()
 		self.state_coords = []
@@ -44,39 +43,16 @@ class LineDetector:
 	def GetStateCoords(self):
 		return self.state_coords
 
-	def DetectPattern(self, frame):
-		patternMat = self.pattern_detector.CreatePatternMatrix(frame)
-		state = self.pattern_detector.GetPattern(patternMat)
-		return state
+	def GetTopViewFrame(self):
+		if len(self.processedFrames) > 0:
+			return self.processedFrames[len(self.processedFrames) - 1]
+		return None
 
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
 		processedFrame = self.processFrame(frame)
-		#straight = self.IsLineStraight(processedFrame)
-		#print(straight)
-		#center = self.IsLineCentered(processedFrame)
-		#print(center)
-		line, direction = self.GetLineInRobotFrame(processedFrame)
-		print(line, direction)
-
-		state = self.DetectPattern(processedFrame)
-
-		if(state != "noline"):
-			[u, v] = self.CalcCenterOfMass(processedFrame)
-			cv2.circle(frame, (u,v), 5, (255, 255, 255), -1)
-			[x,y,z] = self.Get3DRobotCoordsFromImage(u, v)
-			self.state_coords = [x,y,z]	
-			if (state != self.state):
-				[a,b,c] = self.pinhole_camera.projectPixelTo3dRay([u, v])
-				camHomVec = np.transpose(np.array([c,-a,-b,1]))
-				robotHomVec = np.dot(self.robot_image_transform,camHomVec)
-				print(u, v)
-				print(x, y, z)
-				print(state)
-	
-		self.state = state			
-			
-		self.processedFrame = processedFrame
+		
+		self.processedFrames.append(processedFrame)
 		comb = self.ConcatImages(frame, processedFrame)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
@@ -102,7 +78,6 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
-		self.pattern_detector.SetImageSize(self.image_width, self.image_height)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetPose(self, trans, rot):

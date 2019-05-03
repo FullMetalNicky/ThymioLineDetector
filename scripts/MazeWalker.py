@@ -9,21 +9,27 @@ from LineFollowerController import LineFollowerController
 class MazeWalker:
 	def __init__(self, name):
 		self.thymio_name = name
+		self.line_detector = LineDetector(self.thymio_name )
+		self.controller = LineFollowerController(self.thymio_name )     
+		self.pattern_detector = PatternDetector(5,3)
+		self.line_detector.Init()
+		[w, h] = self.line_detector.GetImageSize()
+		self.pattern_detector.SetImageSize(w,h)
+		self.state = "init"
 
-	def Init(self):
-		self.line_detector = LineDetector(thymio_name)
-        self.controller = LineFollowerController(thymio_name)     
-        self.pattern_detector = PatternDetector(5,3)
-        self.line_detector.Init()
-        [w, h] = self.line_detector.GetImageSize()
-        self.pattern_detector.SetImageSize(w,h)
-        self.state = "init"
+	def Simple(self):
+		self.controller.Slow()
+		frame = self.line_detector.GetTopViewFrame()
+		if frame is not None:
+			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
+			state = self.pattern_detector.GetPattern(patternMat)
+			print(state)
 
-    def GameLoop(self):    	
 
+	def GameLoop(self):    	
 		while self.state != "destination":
 			frame = self.line_detector.GetTopViewFrame()
-	    	patternMat = self.pattern_detector.CreatePatternMatrix(frame)
+			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
 			state = self.pattern_detector.GetPattern(patternMat)
 
 			if state == "noline":
