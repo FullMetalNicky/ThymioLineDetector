@@ -10,6 +10,7 @@ from PatternDetector import PatternDetector
 from numpy.linalg import inv
 from image_geometry import PinholeCameraModel 
 from  tf.transformations import rotation_matrix, concatenate_matrices, translation_matrix
+import threading
 
 PI=3.1415926
 
@@ -20,6 +21,7 @@ class LineDetector:
 		self.init_tf=0
 		self.init_camera = 0
 		self.processedFrames = []
+		self.processedFrame = None
 		self.video_publisher = rospy.Publisher(self.thymio_name + '/camera/video', Image, queue_size=10)
 		self.camera_info_subscriber = rospy.Subscriber(self.thymio_name + '/camera/camera_info',CameraInfo, self.update_camera_info)
 		self.tf_listener = tf.TransformListener()
@@ -27,6 +29,7 @@ class LineDetector:
 		self.pinhole_camera = PinholeCameraModel()
 		self.state_coords = []
 		self.center_coords = []
+		self.lock = threading.Lock()
 
 	def update_camera_info(self, data):
 		self.image_width = data.width
@@ -45,15 +48,21 @@ class LineDetector:
 		return self.state_coords
 
 	def GetTopViewFrame(self):
-		if len(self.processedFrames) > 0:
-			return self.processedFrames[len(self.processedFrames) - 1]
-		return None
+		#if len(self.processedFrames) > 0:
+	#		return self.processedFrames[len(self.processedFrames) - 1]
+	#	return None
+		self.lock.acquire()
+		return self.processedFrame
+		self.lock.release()
 
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
 		processedFrame = self.processFrame(frame)
 		
-		self.processedFrames.append(processedFrame)
+		#self.processedFrames.append(processedFrame)
+		self.lock.acquire()
+		self.processedFrame = processedFrame
+		self.lock.release()
 		comb = self.ConcatImages(frame, processedFrame)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	

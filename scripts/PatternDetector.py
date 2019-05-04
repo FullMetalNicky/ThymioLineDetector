@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from MazePatterns import MazePatterns
 
 class PatternDetector:
 	def __init__(self, gridRowNumber, gridColNumber):

@@ -26,8 +26,8 @@ class MazeWalker:
 			eps = 0.1
 			point, direction = self.line_detector.GetLineInRobotFrame(frame)
 			if (np.fabs(direction[1]) > eps) and (1.0 - np.fabs(direction[0]) > eps):
-				#compute theta 
-				#self.controller.RotateByTheta(theta)
+				theta = np.tan(direction[0]/direction[1])
+				self.controller.RotateByTheta(theta)
 				print(direction)
 
 			offset = self.line_detector.GetLineOffset(frame) 
@@ -48,12 +48,14 @@ class MazeWalker:
 
 	def Simple(self):
 		#self.controller.Stop()
-		frame = self.line_detector.GetTopViewFrame()
-		if frame is not None:
+		self.controller.RandomWalker()
+		#frame = self.line_detector.GetTopViewFrame()
+		#if frame is not None:
 			#patternMat = self.pattern_detector.CreatePatternMatrix(frame)
 			#state = self.pattern_detector.GetPattern(patternMat)
 			#print(state)
-			self.Align(frame)
+			#self.Align(frame)
+			#self.controller.RandomWalker()
 			#self.controller.Move()
 
 
@@ -98,10 +100,12 @@ class MazeWalker:
 			elif state == "weird":
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
 				#compute theta and distance 
+				theta = np.tan(point[0]/point[1])
 				self.controller.RotateByTheta(theta)
+				dist = sqrt(point[0]*point[0] + point[1]*point[1])
 				self.controller.MoveDistance(distance)
 				#Random choice +/-90 
-				self.controller.RotateByTheta(theta)
+				#self.controller.RotateByTheta(theta)
 
 			self.Align(frame)
 

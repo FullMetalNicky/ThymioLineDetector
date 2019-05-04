@@ -3,6 +3,9 @@ import cv2
 import numpy as np
 import rospy
 from geometry_msgs.msg import Pose, Twist
+import random
+
+PI=3.1415926
 
 
 class LineFollowerController:
@@ -17,6 +20,8 @@ class LineFollowerController:
 		vel_msg = Twist()
 		angSpeed = 0.2
 		vel_msg.linear.x = 0.0 # m/s
+		if theta < PI/3:
+			angSpeed = 0.1
 		vel_msg.angular.z = angSpeed # m/s
 		currTheta = 0
 		t0 = rospy.Time.now().to_sec()
@@ -40,7 +45,10 @@ class LineFollowerController:
 
 	def MoveDistance(self, distance):
 		vel_msg = Twist()
-		vel_msg.linear.x = 0.1 # m/s
+		if distance < 0.2:
+			vel_msg.linear.x = 0.05 # m/s
+		else:
+			vel_msg.linear.x = 0.10
 		currDist =0
 		t0 = rospy.Time.now().to_sec()
 
@@ -72,3 +80,16 @@ class LineFollowerController:
 		vel_msg = Twist()
 		vel_msg.linear.x = 0.
 		self.velocity_publisher.publish(vel_msg)  
+
+
+	def RandomWalker(self):
+		randMove = random.randrange(0, 2, 1)
+		print(randMove)
+		if(randMove == 0):
+			dist = random.uniform(0.1, 5.0)
+			print ("dist ", dist)
+			self.MoveDistance(dist)
+		else:
+			theta = random.uniform(0.0, PI)
+			print ("theta ", theta)
+			self.RotateByTheta(theta)
