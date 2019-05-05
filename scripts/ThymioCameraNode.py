@@ -91,7 +91,7 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
-    thymio.thymio_state_service_request([-1.,0.12,0.], [0.,0.,-0.7])
+    thymio.thymio_state_service_request([-1.,0.12,0.], [0.,0.,-0.8])
     rospy.sleep(1.)
  
     thymio.Simple()

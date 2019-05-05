@@ -47,6 +47,13 @@ class LineDetector:
 	def GetStateCoords(self):
 		return self.state_coords
 
+	def GetCroppedTopViewFrame(self):
+		if self.processedFrame is None:
+			return None
+		frame = np.zeros([self.image_height, self.image_width], dtype = "uint8")
+		frame[300:self.image_height, :] = self.processedFrame[300:self.image_height, :]
+		return frame
+
 	def GetTopViewFrame(self):
 		#if len(self.processedFrames) > 0:
 	#		return self.processedFrames[len(self.processedFrames) - 1]
@@ -60,13 +67,15 @@ class LineDetector:
 		#processedFrame = self.processFrame(frame)
 		hsvmask = self.LineMaskByColor(frame)
 	 	processedFrame = self.TopView(hsvmask)
+	 	#cropped = self.processedFrame[300:self.image_height, self.image_width]
 
 		#self.processedFrames.append(processedFrame)
 		#self.lock.acquire()
 		self.processedFrame = processedFrame
+		cropped = self.GetCroppedTopViewFrame()
 		#self.lock.release()
-		comb = self.ConcatImages(frame, hsvmask)
-		comb = self.ConcatImages(comb, processedFrame)
+		comb = self.ConcatImages(frame, processedFrame)
+		comb = self.ConcatImages(comb, cropped)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 

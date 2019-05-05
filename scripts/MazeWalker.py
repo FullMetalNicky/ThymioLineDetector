@@ -21,34 +21,37 @@ class MazeWalker:
 		self.center = self.line_detector.GetCenter3DCoords()
 		self.state = MazePatterns.noline
 
-	def Align(self, frame):
+	def Align(self):
 			frame = self.line_detector.GetTopViewFrame()
-			eps = 0.1
+			eps = 0.01
 			point, direction = self.line_detector.GetLineInRobotFrame(frame)
 			#if (np.fabs(direction[1]) > eps) and (1.0 - np.fabs(direction[0]) > eps):
 			#	theta = np.tan(direction[0]/direction[1])
 			#	print("not aligned, direction - ", theta, direction[0], direction[1])
 			#	self.controller.RotateByTheta(theta)
 				#print("not aligned, direction - ", direction)
+			print(point, direction)
 			while direction is None or ((np.fabs(direction[1]) > eps) and (1.0 - np.fabs(direction[0]) > eps)):
 				self.controller.Rotate()
-				frame = self.line_detector.GetTopViewFrame()
+				frame = self.line_detector.GetCroppedTopViewFrame()
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
+			
 			self.controller.Stop()
 
 			frame = self.line_detector.GetTopViewFrame()
 			offset = self.line_detector.GetLineOffset(frame) 
-			if offset < 0.15:
+			print("offset", offset)
+			if np.fabs(offset) < 0.05:
 				return
 			elif(offset < 0):
 				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(-pi/2)
-				self.controller.MoveDistance(offset/2)
+				self.controller.MoveDistance(np.fabs(offset))
 				self.controller.RotateByTheta(pi/2)
 			elif offset > 0:
 				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(pi/2)
-				self.controller.MoveDistance(offset/2)
+				self.controller.MoveDistance(np.fabs(offset)/2)
 				self.controller.RotateByTheta(-pi/2)
 
 	def Simple(self):
@@ -90,6 +93,10 @@ class MazeWalker:
 				self.controller.RotateByTheta(theta)
 				self.controller.MoveDistance(distance)
 				self.controller.Stop()
+				#self.controller.RotateByTheta(-theta)
+				#phi = -(np.arctan2(direction[0], direction[1]) - pi/2)
+				#self.controller.RotateByTheta(phi)
+				self.Align()
 				#self.controller.MoveDistance(distance)
 				#self.controller.MoveToGoal(point[0], point[1], 0.01)
 				#frame = self.line_detector.GetTopViewFrame()
@@ -97,7 +104,7 @@ class MazeWalker:
 				#self.controller.stop()
 				rospy.signal_shutdown('Quit')
 			elif state == MazePatterns.paraline:
-				self.Align(frame)
+				self.Align()
 				self.controller.Move()
 			else:
 				self.controller.Move()

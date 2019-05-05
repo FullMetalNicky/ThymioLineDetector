@@ -98,7 +98,7 @@ class LineFollowerController:
 
 	def Rotate(self):
 		vel_msg = Twist()
-		vel_msg.angular.z = 0.05 # m/s
+		vel_msg.angular.z = 0.1 # m/s
 		self.velocity_publisher.publish(vel_msg)
 
 	def Stop(self):
