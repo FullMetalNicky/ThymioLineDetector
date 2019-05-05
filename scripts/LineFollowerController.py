@@ -86,10 +86,10 @@ class LineFollowerController:
 		randMove = random.randrange(0, 2, 1)
 		print(randMove)
 		if(randMove == 0):
-			dist = random.uniform(0.1, 5.0)
+			dist = random.uniform(0.1, 3.0)
 			print ("dist ", dist)
 			self.MoveDistance(dist)
 		else:
-			theta = random.uniform(0.0, PI)
+			theta = random.uniform(0.0, PI/2)
 			print ("theta ", theta)
 			self.RotateByTheta(theta)

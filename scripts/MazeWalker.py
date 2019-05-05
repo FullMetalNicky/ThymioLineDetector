@@ -5,6 +5,8 @@ import rospy
 from PatternDetector import PatternDetector
 from LineDetector import LineDetector
 from LineFollowerController import LineFollowerController
+from MazePatterns import MazePatterns
+
 
 PI=3.1415926
 
@@ -18,7 +20,7 @@ class MazeWalker:
 		[w, h] = self.line_detector.GetImageSize()
 		self.pattern_detector.SetImageSize(w,h)
 		self.center = self.line_detector.GetCenter3DCoords()
-		self.state = "init"
+		self.state = MazePatterns.noline
 
 	def Align(self, frame):
 			#straight = self.line_detector.IsLineStraight(frame)
@@ -27,24 +29,23 @@ class MazeWalker:
 			point, direction = self.line_detector.GetLineInRobotFrame(frame)
 			if (np.fabs(direction[1]) > eps) and (1.0 - np.fabs(direction[0]) > eps):
 				theta = np.tan(direction[0]/direction[1])
+				print("not aligned, direction - ", theta, direction[0], direction[1])
 				self.controller.RotateByTheta(theta)
-				print(direction)
+				#print("not aligned, direction - ", direction)
 
 			offset = self.line_detector.GetLineOffset(frame) 
 			if offset < 0.15:
 				return
 			elif(offset < 0):
-				print(offset)
+				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(-PI/2)
 				self.controller.MoveDistance(offset/2)
 				self.controller.RotateByTheta(PI/2)
-				print("here")
 			elif offset > 0:
-				print(offset)
+				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(PI/2)
 				self.controller.MoveDistance(offset/2)
 				self.controller.RotateByTheta(-PI/2)
-				print("here")
 
 	def Simple(self):
 		#self.controller.Stop()
@@ -57,6 +58,34 @@ class MazeWalker:
 			#self.Align(frame)
 			#self.controller.RandomWalker()
 			#self.controller.Move()
+
+	def Test(self):
+		while self.state != MazePatterns.destination:
+			frame = self.line_detector.GetTopViewFrame()
+			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
+			state = self.pattern_detector.GetPattern(patternMat)
+			print(state)
+			if state == MazePatterns.ortholine:
+				self.controller.MoveDistance(self.center[0])
+				self.controller.RotateByTheta(PI/2)
+				frame = self.line_detector.GetTopViewFrame()
+				self.Align(frame)
+			elif state == MazePatterns.weird:
+				point, direction = self.line_detector.GetLineInRobotFrame(frame)
+				#compute theta and distance 
+				theta = np.tan(point[0]/point[1])
+				print("wierd theta", theta, point[0], point[1])
+				self.controller.RotateByTheta(theta)
+				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
+				print("wierd distance", distance)
+				self.controller.MoveDistance(distance)
+				frame = self.line_detector.GetTopViewFrame()
+				self.Align(frame)
+			elif state == MazePatterns.paraline:
+				self.controller.Move()
+			else:
+				self.controller.RandomWalker()
+				
 
 
 	def GameLoop(self):    	
@@ -102,7 +131,7 @@ class MazeWalker:
 				#compute theta and distance 
 				theta = np.tan(point[0]/point[1])
 				self.controller.RotateByTheta(theta)
-				dist = sqrt(point[0]*point[0] + point[1]*point[1])
+				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
 				self.controller.MoveDistance(distance)
 				#Random choice +/-90 
 				#self.controller.RotateByTheta(theta)

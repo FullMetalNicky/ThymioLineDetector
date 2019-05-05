@@ -51,18 +51,18 @@ class LineDetector:
 		#if len(self.processedFrames) > 0:
 	#		return self.processedFrames[len(self.processedFrames) - 1]
 	#	return None
-		self.lock.acquire()
+		#self.lock.acquire()
 		return self.processedFrame
-		self.lock.release()
+		#self.lock.release()
 
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
 		processedFrame = self.processFrame(frame)
 		
 		#self.processedFrames.append(processedFrame)
-		self.lock.acquire()
+		#self.lock.acquire()
 		self.processedFrame = processedFrame
-		self.lock.release()
+		#self.lock.release()
 		comb = self.ConcatImages(frame, processedFrame)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	

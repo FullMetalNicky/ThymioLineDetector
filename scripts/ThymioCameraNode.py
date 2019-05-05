@@ -52,7 +52,7 @@ class BasicThymio:
             model_state.pose.position.x = position[0]
             model_state.pose.position.y = position[1]
             model_state.pose.position.z = position[2]
-            qto = quaternion_from_euler(orientation[0], orientation[0], orientation[0], axes='sxyz')
+            qto = quaternion_from_euler(orientation[0], orientation[1], orientation[2], axes='sxyz')
             model_state.pose.orientation.x = qto[0]
             model_state.pose.orientation.y = qto[1]
             model_state.pose.orientation.z = qto[2]
@@ -76,7 +76,7 @@ class BasicThymio:
        
 
     def Simple(self):
-         self.maze_walker.Simple()
+         self.maze_walker.Test()
 
 
 def usage():
@@ -91,11 +91,12 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
-    thymio.thymio_state_service_request([0.,0.,0.], [0.,0.,0.])
+    thymio.thymio_state_service_request([-1.,0.,0.], [0.,0.,0.5])
     rospy.sleep(1.)
  
+    thymio.Simple()
 
-    while not rospy.is_shutdown():
-       str = "nicky"
-       thymio.Simple()
+    #while not rospy.is_shutdown():
+       #str = "nicky"
+       #thymio.Simple()
     

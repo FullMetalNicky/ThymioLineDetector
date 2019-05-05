@@ -17,29 +17,29 @@ class PatternDetector:
 
 	def InitStateMasks(self):
 		destination = np.ones([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		self.patternDictionary["destination"] = destination
+		self.patternDictionary[MazePatterns.destination] = destination
 
 		cross = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		cross[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
 		cross[:, self.gridColNumber/2] = np.ones([self.gridRowNumber], dtype = "uint8")
-		self.patternDictionary["cross"] = cross
+		self.patternDictionary[MazePatterns.crossroads] = cross
 
 		tjunc = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		tjunc[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
 		tjunc[self.gridRowNumber/2: self.gridRowNumber, self.gridColNumber/2] = np.ones([self.gridRowNumber - self.gridRowNumber/2], dtype = "uint8")
-		self.patternDictionary["tjunc"] = tjunc
+		self.patternDictionary[MazePatterns.regTJunction] = tjunc
 
 		ortholine = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		ortholine[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
-		self.patternDictionary["ortholine"] = ortholine
+		self.patternDictionary[MazePatterns.ortholine] = ortholine
 
 		paraline = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		paraline[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
-		self.patternDictionary["paraline"] = paraline
+		self.patternDictionary[MazePatterns.paraline] = paraline
 		
 		deadend = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
 		deadend[self.gridRowNumber - 1, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
-		self.patternDictionary["deadend"] = deadend
+		self.patternDictionary[MazePatterns.deadend] = deadend
 
 
 
@@ -81,31 +81,31 @@ class PatternDetector:
 
 	def GetPattern(self, frame):
 
-		tmp = np.multiply(frame, self.patternDictionary["destination"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.destination])
 		if tmp.sum() == self.gridRowNumber * self.gridColNumber:
-			return "destination"
+			return MazePatterns.destination
 
-		tmp = np.multiply(frame, self.patternDictionary["cross"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.crossroads])
 		if tmp.sum() == self.gridRowNumber + self.gridColNumber - 1:
-			return "cross"
+			return MazePatterns.crossroads
 
-		tmp = np.multiply(frame, self.patternDictionary["tjunc"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.regTJunction])
 		if tmp.sum() == (self.gridRowNumber/2 + self.gridColNumber):
-			return "tjunc"	
+			return MazePatterns.regTJunction
 
-		tmp = np.multiply(frame, self.patternDictionary["ortholine"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.ortholine])
 		if tmp.sum() == self.gridColNumber:
-			return "ortholine"
+			return MazePatterns.ortholine
 
-		tmp = np.multiply(frame, self.patternDictionary["paraline"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.paraline])
 		if tmp.sum() > self.gridRowNumber/2:
-			return "paraline"
+			return MazePatterns.paraline
 
-		tmp = np.multiply(frame, self.patternDictionary["deadend"])
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.deadend])
 		if tmp.sum() == 1:
-			return "deadend"	
+			return MazePatterns.deadend	
 
 		if frame.sum() == 0:
-			return "noline"
+			return MazePatterns.noline
 
-		return "weird"
+		return MazePatterns.weird
