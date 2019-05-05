@@ -57,13 +57,16 @@ class LineDetector:
 
 	def update_camera_stream(self, data):
 		frame = self.bridge.imgmsg_to_cv2(data)
-		processedFrame = self.processFrame(frame)
-		
+		#processedFrame = self.processFrame(frame)
+		hsvmask = self.LineMaskByColor(frame)
+	 	processedFrame = self.TopView(hsvmask)
+
 		#self.processedFrames.append(processedFrame)
 		#self.lock.acquire()
 		self.processedFrame = processedFrame
 		#self.lock.release()
-		comb = self.ConcatImages(frame, processedFrame)
+		comb = self.ConcatImages(frame, hsvmask)
+		comb = self.ConcatImages(comb, processedFrame)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 
@@ -161,6 +164,8 @@ class LineDetector:
 	def GetLineInRobotFrame(self, frame):
 		frame = frame.astype(dtype="uint8")
 		nonZ = cv2.findNonZero(frame)
+		if nonZ is None:
+			return None, None
 		line = cv2.fitLine(nonZ, cv2.DIST_L2, 0, 0.01, 0.01)
 		px1 = line[2]
 		py1 = line[3]
