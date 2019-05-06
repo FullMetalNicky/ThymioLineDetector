@@ -78,6 +78,9 @@ class BasicThymio:
     def Simple(self):
          self.maze_walker.RandomWalker()
 
+    def Play(self):
+        self.maze_walker.GameLoop()
+
 
 def usage():
     return "Wrong number of parameters. basic_move.py [thymio_name]"
@@ -91,10 +94,10 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
-    thymio.thymio_state_service_request([-0.8,1.0,0.], [0.,0.,-0.6])
+    thymio.thymio_state_service_request([1.0,0.12,0.], [0.,0.,0])
     rospy.sleep(1.)
  
-    thymio.Simple()
+    thymio.Play()
 
   #  while not rospy.is_shutdown():
        #str = "nicky"
