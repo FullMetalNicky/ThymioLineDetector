@@ -75,11 +75,11 @@ class BasicThymio:
         (roll, pitch, yaw) = euler_from_quaternion (quat)
        
 
-    def Simple(self):
+    def RandomWalker(self):
          self.maze_walker.RandomWalker()
 
-    def Play(self):
-        self.maze_walker.TestLoop()
+    def GameLoop(self):
+        self.maze_walker.GameLoop()
 
 
 def usage():
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     thymio.thymio_state_service_request([1.0,0.12,0.], [0.,0.,0])
     rospy.sleep(1.)
  
-    thymio.Play()
+    thymio.GameLoop()
 
   #  while not rospy.is_shutdown():
        #str = "nicky"

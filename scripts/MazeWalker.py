@@ -80,7 +80,7 @@ class MazeWalker:
 				self.controller.RandomWalker()
 
 
-	def TestLoop(self):
+	def GameLoop(self):
 		while self.state != "destination" and not rospy.is_shutdown():
 			frame = self.line_detector.GetTopViewFrame()
 			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
@@ -95,6 +95,7 @@ class MazeWalker:
 
 			elif state == MazePatterns.paraline:
 				if self.state != MazePatterns.paraline:
+					print("Align")
 					self.Align()
 				self.controller.Move()
 
@@ -138,97 +139,5 @@ class MazeWalker:
 				self.controller.RotateByTheta(pi/2)
 
 			self.state = state
-
-	def GameLoop(self):    	
-		while self.state != "destination" and not rospy.is_shutdown():
-			frame = self.line_detector.GetTopViewFrame()
-			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
-			state = self.pattern_detector.GetPattern(patternMat)
-			if self.state != state:
-				print(state)
-				print(patternMat)
-				self.state = state
-
-			if state == MazePatterns.noline:
-				self.controller.RandomWalker()
-
-			elif state == MazePatterns.paraline:
-				self.controller.Move()
-				#self.Align()
-
-			elif state == MazePatterns.ortholine:
-				#get center screen coordinates in robot frame
-				self.controller.MoveDistance(self.center[0])
-				randMove = random.randrange(0, 2, 1)
-				if randMove == 1:
-					self.controller.RotateByTheta(pi/2)
-				else:
-					self.controller.RotateByTheta(-pi/2)
-
-			elif state == MazePatterns.deadend:
-				self.controller.RotateByTheta(pi)
-
-			elif state == MazePatterns.rightturn:
-				#get center screen coordinates in robot frame
-				self.controller.MoveDistance(self.center[0])
-				self.controller.RotateByTheta(-pi/2)
-
-			elif state == MazePatterns.leftturn:
-				#get center screen coordinates in robot frame
-				self.controller.MoveDistance(self.center[0])
-				self.controller.RotateByTheta(pi/2)
-
-			elif state == MazePatterns.rightTjunction:
-				self.controller.MoveDistance(self.center[0])
-				randMove = random.randrange(0, 2, 1)
-				if randMove == 1:
-					self.controller.RotateByTheta(pi/2)
-				else:
-					self.controller.Move()
-
-			elif state == MazePatterns.leftTjunction:
-				self.controller.MoveDistance(self.center[0])
-				randMove = random.randrange(0, 2, 1)
-				if randMove == 1:
-					self.controller.RotateByTheta(-pi/2)
-				else:
-					self.controller.Move()
-
-			elif state == MazePatterns.regTJunction:
-				#get center screen coordinates in robot frame
-				self.controller.MoveDistance(self.center[0])
-				randMove = random.randrange(0, 2, 1)
-				if randMove == 1:
-					self.controller.RotateByTheta(pi/2)
-				else:
-					self.controller.RotateByTheta(-pi/2)
-
-			elif state == MazePatterns.crossroads:
-				#get center screen coordinates in robot frame
-				self.controller.MoveDistance(self.center[0])
-				randMove = random.randrange(0, 3, 1)
-				if (randMove == 0):
-					self.controller.Move()
-				elif randMove == 1:
-					self.controller.RotateByTheta(pi/2)
-				else:
-					self.controller.RotateByTheta(-pi/2)
-
-			elif state == MazePatterns.weird:
-				self.controller.Stop()
-				point, direction = self.line_detector.GetLineInRobotFrame(frame)
-				print(point)
-				theta = -(np.arctan2(point[0], point[1]) - pi/2)
-				print("wierd theta", theta, point[0], point[1])
-				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
-				print("wierd distance", distance)
-				self.controller.RotateByTheta(theta)
-				self.controller.MoveDistance(distance)
-				self.controller.Stop()		
-				self.Align()	
-
-			#if state != MazePatterns.noline:	
-			#	self.Align()
-
 
 	
