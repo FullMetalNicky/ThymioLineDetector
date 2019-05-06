@@ -16,58 +16,31 @@ class PatternDetector:
 		self.patternDictionary = dict()
 
 	def InitStateMasks(self):
-		destination = np.ones([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
+		destination = np.array([[1,1,1], [1,1,1], [1,1,1], [1,1,1], [1,1,1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.destination] = destination
 
-		cross = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		cross[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
-		cross[:, self.gridColNumber/2] = np.ones([self.gridRowNumber], dtype = "uint8")
+		cross = np.array([[0,1,0], [0,1,0], [1,1,1], [0,1,0], [0,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.crossroads] = cross
 
-		tjunc = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		tjunc[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
-		tjunc[self.gridRowNumber/2: self.gridRowNumber, self.gridColNumber/2] = np.ones([self.gridRowNumber - self.gridRowNumber/2], dtype = "uint8")
-		self.patternDictionary[MazePatterns.regTJunction] = tjunc
+	#	tjunc = np.array([[-1,-1,-1], [-1,-1,-1], [1,1,1], [0,1,0], [0,1,0]], dtype = "uint8")
+	#	self.patternDictionary[MazePatterns.regTJunction] = tjunc
 
-
-		righttjunc = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		righttjunc[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
-		righttjunc[self.gridRowNumber/2, self.gridColNumber/2:self.gridColNumber] = np.ones([1, self.gridColNumber/2 +1], dtype = "uint8")
-		self.patternDictionary[MazePatterns.rightTjunction] = righttjunc
-	#	print("righttjunc")
-	#	print(righttjunc)
-
-		leftTjunction = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		leftTjunction[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
-		leftTjunction[self.gridRowNumber/2, 0:(self.gridColNumber/2 + 1)] = np.ones([1, self.gridColNumber/2+1], dtype = "uint8")
-		self.patternDictionary[MazePatterns.leftTjunction] = leftTjunction
-	#	print("leftTjunction")
-	#	print(leftTjunction)
-
-		rightturn= np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		rightturn[self.gridRowNumber/2, self.gridColNumber/2:self.gridColNumber] = np.ones([1, self.gridColNumber/2+1], dtype = "uint8")
-		rightturn[self.gridRowNumber/2: self.gridRowNumber, self.gridColNumber/2] = np.ones([self.gridRowNumber - self.gridRowNumber/2], dtype = "uint8")
+	
+		rightturn= np.array([[-1,-1,-1], [-1,-1,-1], [-1,1,1], [0,1,0], [1,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.rightturn] = rightturn
-	#	print("rightturn")
-	#	print(rightturn)
+		#print(rightturn)
 
-		leftturn= np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		leftturn[self.gridRowNumber/2, 0:(self.gridColNumber/2 + 1)] = np.ones([1, self.gridColNumber/2+1], dtype = "uint8")
-		leftturn[self.gridRowNumber/2: self.gridRowNumber, self.gridColNumber/2] = np.ones([self.gridRowNumber - self.gridRowNumber/2], dtype = "uint8")
+		leftturn= np.array([[-1,-1,-1], [-1,-1,-1], [1,1,-1], [0,1,0], [0,1,1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.leftturn] = leftturn
-	#	print("leftturn")
-	#	print(leftturn)
+#		print(leftturn)
 
-		ortholine = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		ortholine[self.gridRowNumber/2, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		ortholine =  np.array([[-1,-1,-1], [-1,-1,-1], [1,1,1], [0,1,0], [-1,1,-1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.ortholine] = ortholine
 
-		paraline = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		paraline[:, self.gridColNumber/2] = np.transpose(np.ones([self.gridRowNumber], dtype = "uint8"))
+		paraline = np.array([[0,1,0], [0,1,0], [0,1,0], [0,1,0], [0,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.paraline] = paraline
 		
-		deadend = np.zeros([self.gridRowNumber, self.gridColNumber], dtype = "uint8")
-		deadend[self.gridRowNumber - 1, :] = np.ones([1, self.gridColNumber], dtype = "uint8")
+		deadend = np.array([[0,0,0], [0,0,0], [-1,0,-1], [-1,1,-1], [-1,1,-1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.deadend] = deadend
 
 
@@ -111,39 +84,35 @@ class PatternDetector:
 	def GetPattern(self, frame):
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.destination])
-		if tmp.sum() == self.gridRowNumber * self.gridColNumber:
+		if tmp.sum() >= 15:
 			return MazePatterns.destination
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.crossroads])
 		if tmp.sum() == self.gridRowNumber + self.gridColNumber - 1:
 			return MazePatterns.crossroads
 
-		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.regTJunction])
-		if tmp.sum() == (self.gridRowNumber/2 + self.gridColNumber):
-			return MazePatterns.regTJunction
-
-		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.rightTjunction])
-		if tmp.sum() == (self.gridRowNumber + self.gridColNumber/2):
-			return MazePatterns.rightTjunction
-
-		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.leftTjunction])
-		if tmp.sum() == (self.gridRowNumber + self.gridColNumber/2):
-			return MazePatterns.leftTjunction
-
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.rightturn])
-		if tmp.sum() == (self.gridRowNumber/2 + self.gridColNumber/2 + 1):
+		if tmp.sum() >= 5:
 			return MazePatterns.rightturn
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.leftturn])
-		if tmp.sum() == (self.gridRowNumber/2 + self.gridColNumber/2 + 1):
+		if tmp.sum() >= 5:
 			return MazePatterns.leftturn
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.ortholine])
-		if tmp.sum() == self.gridColNumber: 
+		if tmp.sum() == 5: 
 			return MazePatterns.ortholine
 
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.rightturn])
+		if tmp.sum() >= 4: 
+			return MazePatterns.rightturn
+
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.leftturn])
+		if tmp.sum() >= 4: 
+			return MazePatterns.leftturn
+
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.paraline])
-		if tmp.sum() > self.gridRowNumber/2:
+		if tmp.sum() > 2:
 			return MazePatterns.paraline
 		#tmp = np.multiply(frame, self.patternDictionary[MazePatterns.deadend])
 		if tmp.sum() > 0:

@@ -100,7 +100,7 @@ class LineDetector:
 		    continue
 
 		self.ComputeHomography()
-		self.center_coords = self.Get3DRobotCoordsFromImage(self.image_width/2, self.image_height/2)
+		self.center_coords = self.Get3DRobotCoordsFromImage(self.image_width/2, self.image_height/2 - 30)
 		self.camera_subscriber = rospy.Subscriber(self.thymio_name + '/camera/image_raw',Image, self.update_camera_stream)
 
 	def SetPose(self, trans, rot):
@@ -202,9 +202,8 @@ class LineDetector:
 	def GetLineOffset(self, frame):
 		frame = frame.astype(dtype="uint8")
 		nonZ = cv2.findNonZero(frame)
-		x,y,w,h = cv2.boundingRect(nonZ)
-		boxCenter = (x + x + w)/2
-		p1 = self.Get3DRobotCoordsFromImage(boxCenter, 0)
+		line = cv2.fitLine(nonZ, cv2.DIST_L2, 0, 0.01, 0.01)
+		p1 = self.Get3DRobotCoordsFromImage(line[2], 0)
 		p2 = self.Get3DRobotCoordsFromImage(self.image_width/2, 0)
 		return p2[1] - p1[1]
 

@@ -79,7 +79,7 @@ class BasicThymio:
          self.maze_walker.RandomWalker()
 
     def Play(self):
-        self.maze_walker.GameLoop()
+        self.maze_walker.TestLoop()
 
 
 def usage():
