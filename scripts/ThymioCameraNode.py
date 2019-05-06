@@ -76,7 +76,7 @@ class BasicThymio:
        
 
     def Simple(self):
-         self.maze_walker.Test()
+         self.maze_walker.RandomWalker()
 
 
 def usage():
@@ -91,7 +91,7 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
-    thymio.thymio_state_service_request([-1.,0.12,0.], [0.,0.,-0.8])
+    thymio.thymio_state_service_request([-0.8,1.0,0.], [0.,0.,-0.6])
     rospy.sleep(1.)
  
     thymio.Simple()

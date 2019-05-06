@@ -66,48 +66,30 @@ class MazeWalker:
 			#self.controller.RandomWalker()
 			#self.controller.Move()
 
-	def Test(self):
-		while self.state != MazePatterns.destination and not rospy.is_shutdown():
+	def RandomWalker(self):
+		while not rospy.is_shutdown():
 			frame = self.line_detector.GetTopViewFrame()
 			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
 			state = self.pattern_detector.GetPattern(patternMat)
 			if self.state != state:
 				print(state)
 				self.state = state
-			#if state == MazePatterns.ortholine:
-			#	self.controller.MoveDistance(self.center[0])
-			#	self.controller.RotateByTheta(pi/2)
-			#	frame = self.line_detector.GetTopViewFrame()
-			#	self.Align(frame)
-			if state == MazePatterns.weird:
+			
+			if state != MazePatterns.noline:
 				self.controller.Stop()
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
 				print(point)
-				#compute theta and distance 
-				#tmp = point[0]/point[1]
 				theta = -(np.arctan2(point[0], point[1]) - pi/2)
 				print("wierd theta", theta, point[0], point[1])
 				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
 				print("wierd distance", distance)
-				#self.controller.Stop()
 				self.controller.RotateByTheta(theta)
 				self.controller.MoveDistance(distance)
 				self.controller.Stop()
-				#self.controller.RotateByTheta(-theta)
-				#phi = -(np.arctan2(direction[0], direction[1]) - pi/2)
-				#self.controller.RotateByTheta(phi)
 				self.Align()
-				#self.controller.MoveDistance(distance)
-				#self.controller.MoveToGoal(point[0], point[1], 0.01)
-				#frame = self.line_detector.GetTopViewFrame()
-				#self.Align(frame)
-				#self.controller.stop()
 				rospy.signal_shutdown('Quit')
-			elif state == MazePatterns.paraline:
-				self.Align()
-				self.controller.Move()
 			else:
-				self.controller.Move()
+				self.controller.RandomWalker()
 				
 			
 

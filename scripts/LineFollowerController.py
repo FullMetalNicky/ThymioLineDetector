@@ -108,14 +108,14 @@ class LineFollowerController:
 
 
 	def RandomWalker(self):
-		randMove = random.randrange(0, 2, 1)
+		randMove = random.randrange(0, 3, 1)
 		print(randMove)
-		if(randMove == 0):
-			dist = random.uniform(0.1, 2.0)
+		if(randMove != 0):
+			dist = random.uniform(0.1, 1.5)
 			print ("dist ", dist)
 			self.MoveDistance(dist)
 		else:
-			theta = random.uniform(-pi/2, pi/2)
+			theta = random.uniform(-pi/4, pi/4)
 			print ("theta ", theta)
 			self.RotateByTheta(theta)
 
