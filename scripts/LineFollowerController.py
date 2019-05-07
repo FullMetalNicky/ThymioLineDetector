@@ -64,7 +64,6 @@ class LineFollowerController:
 		vel_msg.linear.x = 0.
 		vel_msg.angular.z = 0.
 		self.velocity_publisher.publish(vel_msg)  
-		print(currDist)
 
 	def Move(self):
 		vel_msg = Twist()
@@ -86,10 +85,10 @@ class LineFollowerController:
 
 
 	def RandomWalker(self):
-		randMove = random.randrange(0, 3, 1)
+		randMove = random.randrange(0, 2, 1)
 		print(randMove)
 		if(randMove != 0):
-			dist = random.uniform(0.1, 1.5)
+			dist = random.uniform(0.1, 0.5)
 			print ("dist ", dist)
 			self.MoveDistance(dist)
 		else:

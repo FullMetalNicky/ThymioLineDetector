@@ -26,11 +26,11 @@ class MazeWalker:
 			frame = self.line_detector.GetTopViewFrame()
 			eps = 0.01
 			point, direction = self.line_detector.GetLineInRobotFrame(frame)
-			#print(point, direction)
 			while direction is None or ((np.fabs(direction[1]) > eps) and (1.0 - np.fabs(direction[0]) > eps)):
 				ccw = 1
-				if direction is None and direction[1]>0:
-					ccw = 0
+				#if direction is not None and direction[1]>0:
+				#	ccw = 0
+				#	print(direction)
 				self.controller.Rotate(ccw)
 				frame = self.line_detector.GetCroppedTopViewFrame()
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
@@ -39,16 +39,13 @@ class MazeWalker:
 
 			frame = self.line_detector.GetTopViewFrame()
 			offset = self.line_detector.GetLineOffset(frame) 
-			#print("offset", offset)
 			if np.fabs(offset) < 0.12:
 				return
 			elif(offset < 0):
-				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(-pi/2)
 				self.controller.MoveDistance(np.fabs(offset))
 				self.controller.RotateByTheta(pi/2)
 			elif offset > 0:
-				print("not centered, offset-", offset)
 				self.controller.RotateByTheta(pi/2)
 				self.controller.MoveDistance(np.fabs(offset)/2)
 				self.controller.RotateByTheta(-pi/2)
@@ -66,11 +63,8 @@ class MazeWalker:
 			if state != MazePatterns.noline:
 				self.controller.Stop()
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
-				print(point)
 				theta = -(np.arctan2(point[0], point[1]) - pi/2)
-				print("wierd theta", theta, point[0], point[1])
 				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
-				print("wierd distance", distance)
 				self.controller.RotateByTheta(theta)
 				self.controller.MoveDistance(distance)
 				self.controller.Stop()
