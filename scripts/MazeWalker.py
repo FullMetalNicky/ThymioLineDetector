@@ -15,7 +15,7 @@ class MazeWalker:
 		self.thymio_name = name
 		self.line_detector = LineDetector(self.thymio_name )
 		self.controller = LineFollowerController(self.thymio_name )     
-		self.pattern_detector = PatternDetector(5,3)
+		self.pattern_detector = PatternDetector()
 		self.line_detector.Init()
 		[w, h] = self.line_detector.GetImageSize()
 		self.pattern_detector.SetImageSize(w,h)
@@ -131,6 +131,16 @@ class MazeWalker:
 				#get center screen coordinates in robot frame
 				self.controller.MoveDistance(self.center[0])
 				self.controller.RotateByTheta(pi/2)
+
+			elif state == MazePatterns.weird:
+				self.controller.Stop()
+				point, direction = self.line_detector.GetLineInRobotFrame(frame)
+				theta = -(np.arctan2(point[0], point[1]) - pi/2)
+				distance = np.sqrt(point[0]*point[0] + point[1]*point[1])
+				self.controller.RotateByTheta(theta)
+				self.controller.MoveDistance(distance)
+				self.controller.Stop()
+				self.Align()
 
 			self.state = state
 

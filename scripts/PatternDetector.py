@@ -4,9 +4,9 @@ import numpy as np
 from MazePatterns import MazePatterns
 
 class PatternDetector:
-	def __init__(self, gridRowNumber, gridColNumber):
-		self.gridRowNumber = gridRowNumber
-		self.gridColNumber = gridColNumber
+	def __init__(self):
+		self.gridRowNumber = 5
+		self.gridColNumber = 3
 		self.masks = []
 		self.imageWidth = 0
 		self.imageHeight = 0
@@ -21,10 +21,6 @@ class PatternDetector:
 
 		cross = np.array([[0,1,0], [0,1,0], [1,1,1], [0,1,0], [0,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.crossroads] = cross
-
-	#	tjunc = np.array([[-1,-1,-1], [-1,-1,-1], [1,1,1], [0,1,0], [0,1,0]], dtype = "uint8")
-	#	self.patternDictionary[MazePatterns.regTJunction] = tjunc
-
 	
 		rightturn= np.array([[-1,-1,-1], [-1,-1,-1], [-1,1,1], [0,1,0], [1,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.rightturn] = rightturn

@@ -97,9 +97,5 @@ if __name__ == '__main__':
     thymio.thymio_state_service_request([0.0,-0.5,0.], [0.,0.,0.0])
     rospy.sleep(1.)
  
-    thymio.RandomWalker()
+    thymio.GameLoop()
 
-  #  while not rospy.is_shutdown():
-       #str = "nicky"
-       #thymio.Simple()
-    
