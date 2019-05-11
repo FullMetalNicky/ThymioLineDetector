@@ -16,7 +16,7 @@ class PatternDetector:
 		self.patternDictionary = dict()
 
 	def InitStateMasks(self):
-		destination = np.array([[1,1,1], [1,1,1], [1,1,1], [1,1,1], [1,1,1]], dtype = "float32")
+		destination = np.array([[1,1,1], [1,1,1], [1,1,1], [-1,1,-1], [-1,1,-1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.destination] = destination
 
 		cross = np.array([[0,1,0], [0,1,0], [1,1,1], [0,1,0], [0,1,0]], dtype = "float32")
@@ -36,7 +36,7 @@ class PatternDetector:
 		paraline = np.array([[0,1,0], [0,1,0], [0,1,0], [0,1,0], [0,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.paraline] = paraline
 		
-		deadend = np.array([[0,0,0], [0,0,0], [-1,0,-1], [-1,1,-1], [-1,1,-1]], dtype = "float32")
+		deadend = np.array([[0,0,0], [0,0,0], [0,0,0], [0,1,0], [-1,1,-1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.deadend] = deadend
 
 
@@ -80,7 +80,7 @@ class PatternDetector:
 	def GetPattern(self, frame):
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.destination])
-		if tmp.sum() >= 15:
+		if tmp.sum() >= 10:
 			return MazePatterns.destination
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.crossroads])
@@ -110,7 +110,8 @@ class PatternDetector:
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.paraline])
 		if tmp.sum() > 2:
 			return MazePatterns.paraline
-		#tmp = np.multiply(frame, self.patternDictionary[MazePatterns.deadend])
+
+		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.deadend])
 		if tmp.sum() > 0:
 			return MazePatterns.deadend	
 

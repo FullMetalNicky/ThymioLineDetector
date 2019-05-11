@@ -94,7 +94,7 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
-    thymio.thymio_state_service_request([0.0,-0.5,0.], [0.,0.,0.0])
+    thymio.thymio_state_service_request([0.8,0.12,0.], [0.,0.,0])
     rospy.sleep(1.)
  
     thymio.GameLoop()

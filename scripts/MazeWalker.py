@@ -20,7 +20,7 @@ class MazeWalker:
 		[w, h] = self.line_detector.GetImageSize()
 		self.pattern_detector.SetImageSize(w,h)
 		self.center = self.line_detector.GetCenter3DCoords()
-		self.state = MazePatterns.noline
+		self.state = -1
 
 	def Align(self):
 			frame = self.line_detector.GetTopViewFrame()
@@ -81,15 +81,20 @@ class MazeWalker:
 			state = self.pattern_detector.GetPattern(patternMat)
 			if self.state != state:
 				print(state)
-				print(patternMat)
-				
+				#print(patternMat)
+			if state == MazePatterns.destination:
+				#print(patternMat)
+				self.controller.MoveDistance(self.center[0])
+				print("Great success!")
+				self.controller.Stop()	
+				rospy.signal_shutdown('Quit')
 
 			if state == MazePatterns.noline:
 				self.controller.RandomWalker()
 
 			elif state == MazePatterns.paraline:
 				if self.state != MazePatterns.paraline:
-					print("Align")
+					#print("Align")
 					self.Align()
 				self.controller.Move()
 
@@ -117,11 +122,6 @@ class MazeWalker:
 				self.controller.Stop()
 				self.controller.RotateByTheta(pi)
 
-			elif state == MazePatterns.destination:
-				self.controller.Stop()
-				print("great success!")
-				rospy.signal_shutdown('Quit')
-
 			elif state == MazePatterns.rightturn:
 				#get center screen coordinates in robot frame
 				self.controller.MoveDistance(self.center[0])
@@ -144,4 +144,5 @@ class MazeWalker:
 
 			self.state = state
 
+		
 	
