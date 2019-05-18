@@ -52,14 +52,20 @@ class MazeWalker:
 
 
 	def RandomWalker(self):
-		while not rospy.is_shutdown():
+		self.RandomWalkerImp()
+		rospy.signal_shutdown('Quit')			
+
+
+	def RandomWalkerImp(self):
+		finished = False
+		while (finished == False) and not rospy.is_shutdown():
 			frame = self.line_detector.GetTopViewFrame()
 			patternMat = self.pattern_detector.CreatePatternMatrix(frame)
 			state = self.pattern_detector.GetPattern(patternMat)
 			if self.state != state:
-				print(state)
+				#print(state)
 				self.state = state
-			
+
 			if state != MazePatterns.noline:
 				self.controller.Stop()
 				point, direction = self.line_detector.GetLineInRobotFrame(frame)
@@ -69,7 +75,7 @@ class MazeWalker:
 				self.controller.MoveDistance(distance)
 				self.controller.Stop()
 				self.Align()
-				rospy.signal_shutdown('Quit')
+				finished = True
 			else:
 				self.controller.RandomWalker()
 
@@ -82,15 +88,16 @@ class MazeWalker:
 			if self.state != state:
 				print(state)
 				#print(patternMat)
+
 			if state == MazePatterns.destination:
-				#print(patternMat)
+				print(patternMat)
 				self.controller.MoveDistance(self.center[0])
 				print("Great success!")
 				self.controller.Stop()	
 				rospy.signal_shutdown('Quit')
 
 			if state == MazePatterns.noline:
-				self.controller.RandomWalker()
+				self.RandomWalkerImp()
 
 			elif state == MazePatterns.paraline:
 				if self.state != MazePatterns.paraline:

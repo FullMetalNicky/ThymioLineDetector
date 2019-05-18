@@ -94,7 +94,13 @@ if __name__ == '__main__':
         print usage()
         sys.exit(1)
     thymio = BasicThymio(thymio_name)
+    #starting spot on the line, optimal performance for pattern recognition expected
     thymio.thymio_state_service_request([0.8,0.12,0.], [0.,0.,0])
+    #starting away from a line, it's going to fumble a lot until it finds a rhythm
+    #thymio.thymio_state_service_request([-1.0,0.12,0.], [0.,0.,-0.6])
+    #starting near destination
+    #thymio.thymio_state_service_request([1.8,0.0,0.], [0.,0.,-1.57])
+
     rospy.sleep(1.)
  
     thymio.GameLoop()

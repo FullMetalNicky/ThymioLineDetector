@@ -63,9 +63,7 @@ class LineDetector:
 		#self.lock.acquire()
 		self.processedFrame = processedFrame
 		#self.lock.release()
-		#cropped = self.GetCroppedTopViewFrame()		
 		comb = self.ConcatImages(frame, processedFrame)
-		#comb = self.ConcatImages(comb, cropped)
 		msg = self.bridge.cv2_to_imgmsg(comb)
 		self.video_publisher.publish(msg)	
 
@@ -75,7 +73,6 @@ class LineDetector:
 		        (trans,rot)=self.tf_listener.lookupTransform(self.thymio_name +'/base_link', self.thymio_name +'/camera_link', rospy.Time(0))
 		    except(tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
 		        continue
-		    #self.SetPose(trans, euler_from_quaternion(rot))
 		    self.trans= trans
 		    self.rot = euler_from_quaternion(rot)
 		    self.ComputeRobotImageTransform()

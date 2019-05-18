@@ -24,11 +24,9 @@ class PatternDetector:
 	
 		rightturn= np.array([[-1,-1,-1], [-1,-1,-1], [-1,1,1], [0,1,0], [1,1,0]], dtype = "float32")
 		self.patternDictionary[MazePatterns.rightturn] = rightturn
-		#print(rightturn)
 
 		leftturn= np.array([[-1,-1,-1], [-1,-1,-1], [1,1,-1], [0,1,0], [0,1,1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.leftturn] = leftturn
-#		print(leftturn)
 
 		ortholine =  np.array([[-1,-1,-1], [-1,-1,-1], [1,1,1], [0,1,0], [-1,1,-1]], dtype = "float32")
 		self.patternDictionary[MazePatterns.ortholine] = ortholine
@@ -80,7 +78,7 @@ class PatternDetector:
 	def GetPattern(self, frame):
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.destination])
-		if tmp.sum() >= 10:
+		if tmp.sum() >= 11:
 			return MazePatterns.destination
 
 		tmp = np.multiply(frame, self.patternDictionary[MazePatterns.crossroads])
